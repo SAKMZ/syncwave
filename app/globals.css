@@ -92,20 +92,32 @@
 html {
   height: 100%;
   background: var(--bg);
+  /* Kill any horizontal overflow so mobile browsers never shrink-to-fit
+     (which makes the phone render the desktop layout). */
+  overflow-x: hidden;
 }
 body {
   min-height: 100%;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
   background: transparent;
   color: var(--ink);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+/* Media never forces the layout wider than the screen. */
+img,
+svg,
+video {
+  max-width: 100%;
 }
 
 /* Animated aurora backdrop — the base ambience behind every page (real element
    in the layout so it paints reliably below all content). */
 .sw-aurora {
   position: fixed;
-  inset: -20%;
+  inset: 0;
   z-index: -3;
   pointer-events: none;
   background:
@@ -163,7 +175,7 @@ body {
 /* --- Ambient per-track backdrop (room) ---------------------------------- */
 .sw-ambient {
   position: fixed;
-  inset: -25%;
+  inset: 0;
   z-index: -1;
   background-size: cover;
   background-position: center;

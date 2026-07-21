@@ -2,14 +2,13 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, type Socket } from "socket.io-client";
-import { Link2, Users, MessageSquare, ListMusic, Check, Loader2, Clock } from "lucide-react";
+import { Link2, Users, MessageSquare, ListMusic, Check, Loader2, Clock, Play } from "lucide-react";
 import { EVENTS, REACTIONS } from "@/lib/protocol.mjs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Player from "@/components/Player";
 import SearchPanel from "@/components/SearchPanel";
-import InstallButton from "@/components/InstallButton";
-import RoomManifest from "@/components/RoomManifest";
+import InstallButton, { InstallBanner } from "@/components/InstallButton";
 
 type Status = { state: "cached" | "downloading" | "pending"; percent: number };
 type Track = {
@@ -41,6 +40,8 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   const [chat, setChat] = useState<ChatMsg[]>([]);
   const [skipVotes, setSkipVotes] = useState(0);
   const [buffering, setBuffering] = useState(false);
+  const [preparing, setPreparing] = useState(false);
+  const [needsGesture, setNeedsGesture] = useState(false);
   const [dl, setDl] = useState<Record<string, number>>({});
   const [floats, setFloats] = useState<{ id: string; emoji: string; left: number }[]>([]);
 
@@ -65,6 +66,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     };
     setCurrent(s.current);
     setIsPlaying(s.isPlaying);
+    setPreparing(Boolean(s.preparing));
     setSkipVotes(s.skipVotes ?? 0);
     if (typeof s.serverNow === "number" && offsetRef.current === 0) {
       offsetRef.current = s.serverNow - Date.now();
@@ -131,11 +133,12 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joined]);
 
-  // audio sync loop
+  // audio sync loop — only runs once the server says the track is ready
+  // (not `preparing`), so we never hit /audio before it's cached.
   const retryRef = useRef(0);
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !current) return;
+    if (!audio || !current || preparing) return;
     const wantSrc = `/audio/${current.videoId}`;
     if (!audio.src.endsWith(wantSrc)) {
       retryRef.current = 0;
@@ -145,7 +148,15 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     const tick = () => {
       const pb = playbackRef.current;
       const expected = pb.isPlaying ? (serverNow() - pb.startedAt) / 1000 : pb.pausedPosition;
-      if (pb.isPlaying && audio.paused) audio.play().catch(() => {});
+      if (pb.isPlaying && audio.paused) {
+        audio
+          .play()
+          .then(() => setNeedsGesture(false))
+          .catch((err) => {
+            // Mobile browsers block autoplay without a user gesture.
+            if (err?.name === "NotAllowedError") setNeedsGesture(true);
+          });
+      }
       if (!pb.isPlaying && !audio.paused) audio.pause();
       if (Number.isFinite(expected) && Math.abs(audio.currentTime - expected) > 0.75) {
         audio.currentTime = Math.max(0, expected);
@@ -156,7 +167,17 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.videoId, isPlaying]);
+  }, [current?.videoId, isPlaying, preparing]);
+
+  // Tap-to-start when the browser blocked autoplay (counts as a user gesture).
+  const resumeAudio = () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    audio
+      .play()
+      .then(() => setNeedsGesture(false))
+      .catch(() => {});
+  };
 
   const emit = (ev: string, payload?: any) => socketRef.current?.emit(ev, payload);
   const onEnded = () => {
@@ -186,8 +207,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   if (!joined) {
     return (
       <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6">
-        <RoomManifest code={code} />
-        <div className="w-full sw-glass p-8 text-center">
+        <div className="w-full sw-glass p-6 sm:p-8 text-center">
           <div className="mb-1 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
             Syncwave
           </div>
@@ -211,8 +231,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   }
 
   return (
-    <main className="mx-auto grid max-w-6xl gap-4 p-4 md:grid-cols-[1fr_340px]">
-      <RoomManifest code={code} />
+    <main className="mx-auto grid max-w-6xl gap-4 p-3 sm:p-4 md:grid-cols-[1fr_340px]">
       {/* ambient backdrop that glows with the current album art */}
       <div
         className={`sw-ambient ${current?.thumbnail ? "on" : ""}`}
@@ -234,15 +253,27 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
         ))}
       </div>
 
-      <section className="flex flex-col gap-4">
-        <div className="flex items-center justify-between">
-          <div>
+      {/* Autoplay was blocked (mobile) — a tap counts as the needed gesture. */}
+      {needsGesture && current && !preparing && (
+        <button
+          onClick={resumeAudio}
+          className="fixed inset-x-0 bottom-5 z-[60] mx-auto flex w-max items-center gap-2 rounded-full bg-gradient-to-br from-[var(--accent)] to-[#6b3ff0] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_-6px_var(--accent)] animate-pulse"
+        >
+          <Play className="size-4" /> Tap to start audio
+        </button>
+      )}
+
+      <section className="flex min-w-0 flex-col gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="min-w-0">
             <div className="flex items-center gap-2 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
               Syncwave{aiDj ? ` · AI DJ: ${aiDj}` : ""}
             </div>
-            <h1 className="font-display text-2xl font-bold text-ink">{roomName}</h1>
+            <h1 className="truncate font-display text-xl sm:text-2xl font-bold text-ink">
+              {roomName}
+            </h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex shrink-0 items-center gap-2">
             <InstallButton />
             <Button variant="outline" size="sm" onClick={copyLink} className="gap-1.5">
               {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
@@ -250,6 +281,8 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
             </Button>
           </div>
         </div>
+
+        <InstallBanner code={code} />
 
         <Player
           current={current}
@@ -259,6 +292,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
           isHost={isHost}
           downloadPct={curDl}
           buffering={buffering}
+          preparing={preparing}
           skipVotes={skipVotes}
           needVotes={needVotes}
           onPlayPause={() => emit(EVENTS.CONTROL_PLAYPAUSE)}

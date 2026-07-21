@@ -45,7 +45,7 @@ a study room, a Discord community's permanent hangout.
   link can live forever.
 - 📱 **Installable PWA** — install a room to your home screen and it opens
   **straight back into that room** (per-room manifest), no code re-entry. Great for
-  permanent community rooms.
+  permanent community rooms. *(Install requires HTTPS — see [DEPLOY.md](DEPLOY.md).)*
 - 🎨 **Immersive UI** — aurora backdrop, album-art ambient glow, glassmorphism, an
   animated equalizer, and a proper mobile layout.
 - 🐳 **One-container deploy** — Next.js + realtime server + audio resolver in a

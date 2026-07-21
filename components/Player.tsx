@@ -36,6 +36,7 @@ export default function Player({
   isHost,
   downloadPct,
   buffering,
+  preparing,
   skipVotes,
   needVotes,
   onPlayPause,
@@ -50,6 +51,7 @@ export default function Player({
   isHost: boolean;
   downloadPct: number | null;
   buffering: boolean;
+  preparing: boolean;
   skipVotes: number;
   needVotes: number;
   onPlayPause: () => void;
@@ -59,10 +61,13 @@ export default function Player({
 }) {
   const dur = duration || current?.duration || 0;
   const pct = dur ? Math.min(100, (position / dur) * 100) : 0;
-  const loading = buffering || downloadPct != null;
+  // While the server is caching the track, show the DOWNLOAD progress instead
+  // of the (not-yet-started) playback progress.
+  const cachePct = downloadPct ?? 0;
+  const loading = preparing || buffering;
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isHost || !dur) return;
+    if (!isHost || !dur || preparing) return;
     const rect = e.currentTarget.getBoundingClientRect();
     onSeek(((e.clientX - rect.left) / rect.width) * dur);
   };
@@ -76,10 +81,10 @@ export default function Player({
 
       {current ? (
         <>
-          <div className="flex items-center gap-5">
+          <div className="flex items-center gap-4 sm:gap-5">
             <div className="relative shrink-0">
               <div
-                className={`relative size-28 overflow-hidden rounded-2xl ${isPlaying ? "sw-glow" : ""}`}
+                className={`relative size-24 sm:size-28 overflow-hidden rounded-2xl ${isPlaying ? "sw-glow" : ""}`}
               >
                 {current.thumbnail ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -98,34 +103,56 @@ export default function Player({
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="truncate font-display text-2xl font-bold text-ink">
+              <div className="truncate font-display text-xl sm:text-2xl font-bold text-ink">
                 {current.title}
               </div>
-              <div className="truncate text-base text-ink/60">{current.artist}</div>
-              {downloadPct != null && downloadPct < 100 && (
-                <div className="mt-1.5 text-xs font-medium text-accent-2">
-                  Buffering — {downloadPct}%
+              <div className="truncate text-sm sm:text-base text-ink/60">{current.artist}</div>
+              {preparing ? (
+                <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium text-accent-2">
+                  <Loader2 className="size-3.5 animate-spin" />
+                  {cachePct >= 100 ? "Processing audio…" : `Caching audio — ${cachePct}%`}
                 </div>
+              ) : (
+                buffering && (
+                  <div className="mt-1.5 text-xs font-medium text-accent-2">Buffering…</div>
+                )
               )}
             </div>
           </div>
 
-          {/* progress */}
+          {/* progress — playback bar, or a caching bar while the track downloads */}
           <div className="mt-6">
-            <div
-              className={`group relative h-2.5 w-full rounded-full bg-white/8 ${isHost ? "cursor-pointer" : ""}`}
-              onClick={seek}
-            >
-              <div className="sw-accent-bar absolute inset-y-0 left-0 rounded-full" style={{ width: `${pct}%` }} />
-              <div
-                className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-[0_0_12px_rgba(139,92,255,0.9)] transition-opacity group-hover:opacity-100"
-                style={{ left: `${pct}%` }}
-              />
-            </div>
-            <div className="mt-2 flex justify-between font-mono text-xs text-ink/50">
-              <span>{fmt(position)}</span>
-              <span>{fmt(dur)}</span>
-            </div>
+            {preparing ? (
+              <>
+                <div className="relative h-2.5 w-full overflow-hidden rounded-full bg-white/8">
+                  <div
+                    className={`sw-accent-bar absolute inset-y-0 left-0 rounded-full transition-[width] duration-300 ${cachePct >= 100 ? "animate-pulse" : ""}`}
+                    style={{ width: `${cachePct}%` }}
+                  />
+                </div>
+                <div className="mt-2 flex justify-between font-mono text-xs text-accent-2">
+                  <span>{cachePct >= 100 ? "Processing…" : "Caching audio…"}</span>
+                  <span>{cachePct >= 100 ? "" : `${cachePct}%`}</span>
+                </div>
+              </>
+            ) : (
+              <>
+                <div
+                  className={`group relative h-2.5 w-full rounded-full bg-white/8 ${isHost ? "cursor-pointer" : ""}`}
+                  onClick={seek}
+                >
+                  <div className="sw-accent-bar absolute inset-y-0 left-0 rounded-full" style={{ width: `${pct}%` }} />
+                  <div
+                    className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-[0_0_12px_rgba(139,92,255,0.9)] transition-opacity group-hover:opacity-100"
+                    style={{ left: `${pct}%` }}
+                  />
+                </div>
+                <div className="mt-2 flex justify-between font-mono text-xs text-ink/50">
+                  <span>{fmt(position)}</span>
+                  <span>{fmt(dur)}</span>
+                </div>
+              </>
+            )}
           </div>
 
           {/* controls */}
@@ -134,7 +161,8 @@ export default function Player({
               <>
                 <button
                   onClick={onPlayPause}
-                  className="grid size-12 place-items-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[#6b3ff0] text-white shadow-[0_8px_30px_-6px_var(--accent)] transition-transform hover:scale-105 active:scale-95"
+                  disabled={preparing}
+                  className="grid size-12 place-items-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[#6b3ff0] text-white shadow-[0_8px_30px_-6px_var(--accent)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
                   aria-label={isPlaying ? "Pause" : "Play"}
                 >
                   {isPlaying ? <Pause className="size-5" /> : <Play className="size-5 translate-x-0.5" />}

@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   description:
     "Self-hosted, AI-powered collaborative listening rooms. Start a room, share the link, and jam with your friends in sync.",
   icons: { icon: "/icon.svg", apple: "/icon.svg" },
+  manifest: "/manifest.webmanifest",
   appleWebApp: { capable: true, title: "Syncwave", statusBarStyle: "black-translucent" },
 };
 

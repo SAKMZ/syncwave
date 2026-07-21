@@ -75,8 +75,43 @@ you're not a bot"). If playback fails:
 3. Uncomment the cookies volume + set `YTDLP_COOKIES_FILE=/app/cookies.txt` in
    `.env`, then `docker compose up -d`.
 
-## Optional: HTTPS / domain
+## HTTPS — required for "Install app" (PWA)
 
-Put Caddy or Nginx in front, proxying `:3000` and terminating TLS. WebSockets must
-be proxied (Socket.io upgrades on `/socket.io`). Then set `PUBLIC_URL=https://your.domain`.
-HTTPS is also what makes the **PWA installable** on phones.
+**The app-install prompt and service worker only work in a _secure context_:
+HTTPS, or `http://localhost`.** Over a plain-HTTP LAN address like
+`http://192.168.0.150:3000`, browsers give you no Install button and no offline
+support — that's a browser rule, not a Syncwave limitation. Everything else
+(rooms, sync, chat) works fine over plain HTTP; only the installable-app feature
+needs HTTPS. Pick one of these to get it:
+
+### Easiest for a home server: Tailscale Serve (free, no domain, real cert)
+
+```bash
+# once, on the server:
+curl -fsSL https://tailscale.com/install.sh | sh
+sudo tailscale up
+# expose the container over HTTPS on your tailnet:
+sudo tailscale serve --bg 3000
+tailscale serve status          # shows your https://<machine>.<tailnet>.ts.net URL
+```
+
+Set `PUBLIC_URL` to that `https://…ts.net` URL and `docker compose up -d`. Anyone
+on your tailnet (install the Tailscale app on the phone) can open it and **Install
+app** will appear. Great for private testing.
+
+### Public, with your own domain: Caddy (automatic Let's Encrypt)
+
+Point a domain's DNS at the server, then a two-line `Caddyfile`:
+
+```
+your.domain {
+    reverse_proxy localhost:3000
+}
+```
+
+Caddy fetches a certificate automatically and proxies WebSockets out of the box.
+Set `PUBLIC_URL=https://your.domain`. (Nginx works too — just make sure the
+`/socket.io` upgrade headers are proxied.)
+
+Once you're on HTTPS, opening a room shows an **Install this room** banner, and
+installing it creates an app that launches straight back into that room.
