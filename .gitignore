@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# next.js
+.next/
+out/
+build/
+next-env.d.ts
+tsconfig.tsbuildinfo
+
+# runtime
+.env
+.env.local
+cache/
+data/
+*.log
+
+# reference material (not part of the project)
+_reference/
+
+# os / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

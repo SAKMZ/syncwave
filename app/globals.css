@@ -1,0 +1,241 @@
+@import "tailwindcss";
+
+/* Manual dark/light pin via [data-theme]; defaults to dark. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *, :root));
+
+/* ---------------------------------------------------------------------------
+   Syncwave theme — dark "synth" identity. Ports shadcn token architecture into
+   Tailwind v4 namespaces (text-ink, bg-bg, border-ink, shadow-drawer, …) and
+   layers on an ambient, glass, glowing aesthetic — Syncwave's own dark identity.
+--------------------------------------------------------------------------- */
+@theme {
+  --color-bg: var(--bg);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-muted: var(--muted);
+  --color-overlay: var(--overlay);
+  --color-soft-border: var(--soft-border);
+  --color-field: var(--field);
+  --color-surface: var(--surface);
+  --color-surface-border: var(--surface-border);
+  --color-line: var(--line);
+  --color-vermilion: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-3: var(--accent-3);
+  --color-accent-soft: var(--accent-soft);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent-color);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+
+  --shadow-drawer: 0 24px 60px -12px rgba(0, 0, 0, 0.7);
+  --tracking-eyebrow: 0.22em;
+
+  --font-display: var(--font-sora), ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --bg: #08080e;
+  --ink: #f1f1f8;
+  --ink-soft: #ccccdd;
+  --muted: #8f8fa8;
+  --overlay: rgba(5, 5, 10, 0.7);
+  --soft-border: rgba(255, 255, 255, 0.08);
+  --line: rgba(255, 255, 255, 0.14);
+  --field: rgba(255, 255, 255, 0.04);
+  --surface: rgba(22, 22, 34, 0.55);
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --accent: #8b5cff; /* violet */
+  --accent-2: #22d3ee; /* cyan */
+  --accent-3: #ff4d8d; /* magenta */
+  --accent-soft: rgba(139, 92, 255, 0.16);
+
+  --background: var(--bg);
+  --foreground: var(--ink);
+  --card: rgba(22, 22, 34, 0.6);
+  --card-foreground: var(--ink);
+  --popover: #14141f;
+  --popover-foreground: var(--ink);
+  --primary: #8b5cff;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(255, 255, 255, 0.06);
+  --secondary-foreground: var(--ink);
+  --muted-foreground: var(--muted);
+  --accent-color: rgba(255, 255, 255, 0.06);
+  --accent-foreground: var(--ink);
+  --destructive: #f43f5e;
+  --destructive-foreground: #ffffff;
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.14);
+  --ring: #8b5cff;
+}
+
+html {
+  height: 100%;
+  background: var(--bg);
+}
+body {
+  min-height: 100%;
+  background: transparent;
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Animated aurora backdrop — the base ambience behind every page (real element
+   in the layout so it paints reliably below all content). */
+.sw-aurora {
+  position: fixed;
+  inset: -20%;
+  z-index: -3;
+  pointer-events: none;
+  background:
+    radial-gradient(40% 50% at 15% 8%, rgba(139, 92, 255, 0.55), transparent 62%),
+    radial-gradient(38% 48% at 88% 12%, rgba(34, 211, 238, 0.45), transparent 62%),
+    radial-gradient(50% 55% at 72% 92%, rgba(255, 77, 141, 0.4), transparent 62%);
+  filter: blur(20px) saturate(1.3);
+  animation: sw-aurora 22s ease-in-out infinite alternate;
+}
+@keyframes sw-aurora {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(2%, -2%, 0) scale(1.08); }
+  100% { transform: translate3d(-2%, 2%, 0) scale(1.04); }
+}
+.sw-grain {
+  position: fixed;
+  inset: 0;
+  z-index: -2;
+  pointer-events: none;
+  opacity: 0.04;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* --- Glass surfaces ------------------------------------------------------ */
+.sw-glass {
+  background: linear-gradient(180deg, rgba(18, 18, 28, 0.62), rgba(12, 12, 20, 0.58));
+  backdrop-filter: blur(20px) saturate(1.3);
+  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 20px 50px -24px rgba(0, 0, 0, 0.9);
+}
+.sw-glass-strong {
+  background: linear-gradient(180deg, rgba(28, 28, 42, 0.75), rgba(16, 16, 26, 0.7));
+  backdrop-filter: blur(22px) saturate(1.4);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 30px 70px -30px rgba(0, 0, 0, 0.95);
+}
+
+.sw-glow {
+  box-shadow: 0 0 50px -12px var(--accent), 0 0 90px -30px var(--accent-3);
+}
+.sw-gradient-text {
+  background: linear-gradient(100deg, var(--accent) 0%, var(--accent-2) 50%, var(--accent-3) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.sw-accent-bar {
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+/* --- Ambient per-track backdrop (room) ---------------------------------- */
+.sw-ambient {
+  position: fixed;
+  inset: -25%;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  filter: blur(70px) saturate(2.2) brightness(1);
+  opacity: 0;
+  transform: scale(1.25);
+  transition: opacity 1.2s ease;
+}
+.sw-ambient.on {
+  opacity: 0.7;
+}
+/* Darken toward the edges so foreground text stays readable over the art. */
+.sw-ambient::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(70% 70% at 50% 35%, transparent, rgba(8, 8, 14, 0.75));
+}
+
+/* --- Animated equalizer -------------------------------------------------- */
+.sw-eq {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 14px;
+}
+.sw-eq > span {
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent));
+  animation: sw-eq 900ms ease-in-out infinite;
+}
+.sw-eq > span:nth-child(2) { animation-delay: 150ms; }
+.sw-eq > span:nth-child(3) { animation-delay: 300ms; }
+.sw-eq > span:nth-child(4) { animation-delay: 450ms; }
+.sw-eq.paused > span { animation-play-state: paused; height: 4px; }
+@keyframes sw-eq {
+  0%, 100% { height: 3px; }
+  50% { height: 14px; }
+}
+
+/* Floating emoji reactions. */
+@keyframes sw-float {
+  0% { transform: translateY(0) scale(0.5); opacity: 0; }
+  12% { transform: translateY(-16px) scale(1.1); opacity: 1; }
+  75% { opacity: 1; }
+  100% { transform: translateY(-260px) scale(1.3) rotate(8deg); opacity: 0; }
+}
+.sw-float { animation: sw-float 2.6s ease-out forwards; }
+
+/* Spinning disc for the artwork while playing. */
+@keyframes sw-spin { to { transform: rotate(360deg); } }
+.sw-spin { animation: sw-spin 8s linear infinite; }
+.sw-spin.paused { animation-play-state: paused; }
+
+/* --- helper classes used by ported components --------------------------- */
+.sw-eyebrow {
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-eyebrow);
+  font-weight: 600;
+  color: var(--muted);
+}
+.sw-focus:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.sw-scroll { scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.15) transparent; }
+.sw-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
+.sw-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 8px; }
+.sw-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+.sw-drawer-overlay, .sw-alert-overlay { position: fixed; }
+.sw-toast { border: 1px solid var(--soft-border); background: var(--surface); color: var(--ink); border-radius: var(--radius-md); }
+@keyframes sw-fade-in { from { opacity: 0; } to { opacity: 1; } }
+.sw-fade-in { animation: sw-fade-in 160ms ease-out; }
+@keyframes sw-modal-pop { from { opacity: 0; transform: translate(-50%, -50%) scale(0.97); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+.sw-modal-pop, .sw-alert-content { animation: sw-modal-pop 160ms ease-out; }
+@keyframes sw-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
+.sw-drawer-content { animation: sw-drawer-in 200ms ease-out; }
