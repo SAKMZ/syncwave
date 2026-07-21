@@ -2,11 +2,23 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, type Socket } from "socket.io-client";
-import { Link2, Users, MessageSquare, ListMusic, Check, Loader2, Clock, Play } from "lucide-react";
-import { EVENTS, REACTIONS } from "@/lib/protocol.mjs";
+import {
+  Link2,
+  Users,
+  MessageSquare,
+  ListMusic,
+  Check,
+  Loader2,
+  Clock,
+  Play,
+  Search as SearchIcon,
+  X,
+} from "lucide-react";
+import { EVENTS } from "@/lib/protocol.mjs";
+import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import Player from "@/components/Player";
+import BottomPlayer from "@/components/BottomPlayer";
 import SearchPanel from "@/components/SearchPanel";
 import InstallButton, { InstallBanner } from "@/components/InstallButton";
 
@@ -23,6 +35,8 @@ type Track = {
 };
 type Participant = { id: string; nick: string; isHost: boolean };
 type ChatMsg = { id: string; ts: number; nick?: string; text: string; system?: boolean; dj?: boolean };
+type Repeat = "off" | "one" | "all";
+type Tab = "queue" | "search" | "chat";
 
 export default function Room({ code, asHost }: { code: string; asHost: boolean }) {
   const [nick, setNick] = useState("");
@@ -42,8 +56,12 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   const [buffering, setBuffering] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [needsGesture, setNeedsGesture] = useState(false);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState<Repeat>("off");
   const [dl, setDl] = useState<Record<string, number>>({});
   const [floats, setFloats] = useState<{ id: string; emoji: string; left: number }[]>([]);
+  const [tab, setTab] = useState<Tab>("queue");
+  const [unread, setUnread] = useState(0);
 
   const socketRef = useRef<Socket | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -67,6 +85,8 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     setCurrent(s.current);
     setIsPlaying(s.isPlaying);
     setPreparing(Boolean(s.preparing));
+    setShuffle(Boolean(s.shuffle));
+    if (s.repeat) setRepeat(s.repeat);
     setSkipVotes(s.skipVotes ?? 0);
     if (typeof s.serverNow === "number" && offsetRef.current === 0) {
       offsetRef.current = s.serverNow - Date.now();
@@ -98,7 +118,10 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       setParticipants(s.participants)
     );
     socket.on(EVENTS.PLAYBACK_UPDATE, (s: any) => applyPlayback(s));
-    socket.on(EVENTS.CHAT_NEW, (m: ChatMsg) => setChat((c) => [...c.slice(-199), m]));
+    socket.on(EVENTS.CHAT_NEW, (m: ChatMsg) => {
+      setChat((c) => [...c.slice(-199), m]);
+      if (!m.system) setUnread((u) => u + 1);
+    });
     socket.on(EVENTS.REACTION_NEW, ({ id, emoji }: { id: string; emoji: string }) => {
       const f = { id, emoji, left: 8 + Math.random() * 84 };
       setFloats((cur) => [...cur, f]);
@@ -133,8 +156,12 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [joined]);
 
-  // audio sync loop — only runs once the server says the track is ready
-  // (not `preparing`), so we never hit /audio before it's cached.
+  // clear the chat badge when the chat tab is open
+  useEffect(() => {
+    if (tab === "chat") setUnread(0);
+  }, [tab, chat]);
+
+  // audio sync loop — only runs once the server says the track is ready.
   const retryRef = useRef(0);
   useEffect(() => {
     const audio = audioRef.current;
@@ -153,7 +180,6 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
           .play()
           .then(() => setNeedsGesture(false))
           .catch((err) => {
-            // Mobile browsers block autoplay without a user gesture.
             if (err?.name === "NotAllowedError") setNeedsGesture(true);
           });
       }
@@ -169,14 +195,10 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current?.videoId, isPlaying, preparing]);
 
-  // Tap-to-start when the browser blocked autoplay (counts as a user gesture).
   const resumeAudio = () => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio
-      .play()
-      .then(() => setNeedsGesture(false))
-      .catch(() => {});
+    audio.play().then(() => setNeedsGesture(false)).catch(() => {});
   };
 
   const emit = (ev: string, payload?: any) => socketRef.current?.emit(ev, payload);
@@ -206,8 +228,8 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
 
   if (!joined) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-md flex-col items-center justify-center px-6">
-        <div className="w-full sw-glass p-6 sm:p-8 text-center">
+      <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col items-center justify-center px-6">
+        <div className="w-full sw-glass p-6 text-center sm:p-8">
           <div className="mb-1 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
             Syncwave
           </div>
@@ -231,7 +253,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   }
 
   return (
-    <main className="mx-auto grid max-w-6xl gap-4 p-3 sm:p-4 md:grid-cols-[1fr_340px]">
+    <div className="flex h-[100dvh] flex-col overflow-hidden">
       {/* ambient backdrop that glows with the current album art */}
       <div
         className={`sw-ambient ${current?.thumbnail ? "on" : ""}`}
@@ -243,156 +265,268 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       {/* floating emoji reactions */}
       <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
         {floats.map((f) => (
-          <span
-            key={f.id}
-            className="sw-float absolute bottom-24 text-4xl"
-            style={{ left: `${f.left}%` }}
-          >
+          <span key={f.id} className="sw-float absolute bottom-24 text-4xl" style={{ left: `${f.left}%` }}>
             {f.emoji}
           </span>
         ))}
       </div>
 
-      {/* Autoplay was blocked (mobile) — a tap counts as the needed gesture. */}
+      {/* autoplay blocked (mobile) — a tap satisfies the gesture requirement */}
       {needsGesture && current && !preparing && (
         <button
           onClick={resumeAudio}
-          className="fixed inset-x-0 bottom-5 z-[60] mx-auto flex w-max items-center gap-2 rounded-full bg-gradient-to-br from-[var(--accent)] to-[#6b3ff0] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_-6px_var(--accent)] animate-pulse"
+          className="fixed inset-x-0 bottom-24 z-[60] mx-auto flex w-max items-center gap-2 rounded-full bg-gradient-to-br from-[var(--accent)] to-[#6b3ff0] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_-6px_var(--accent)] animate-pulse"
         >
           <Play className="size-4" /> Tap to start audio
         </button>
       )}
 
-      <section className="flex min-w-0 flex-col gap-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* ── top nav: room identity + actions (non-interactive info lives here) ── */}
+      <header className="z-30 flex shrink-0 items-center justify-between gap-2 border-b border-white/8 px-3 py-2.5 backdrop-blur-xl sm:px-4">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-3)] text-sm font-black text-white">
+            ♪
+          </div>
           <div className="min-w-0">
-            <div className="flex items-center gap-2 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
-              Syncwave{aiDj ? ` · AI DJ: ${aiDj}` : ""}
-            </div>
-            <h1 className="truncate font-display text-xl sm:text-2xl font-bold text-ink">
+            <h1 className="truncate font-display text-base font-bold leading-tight text-ink sm:text-lg">
               {roomName}
             </h1>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <InstallButton />
-            <Button variant="outline" size="sm" onClick={copyLink} className="gap-1.5">
-              {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
-              {copied ? "Copied" : "Share link"}
-            </Button>
+            <div className="truncate text-[10px] font-semibold tracking-eyebrow text-accent-2 uppercase">
+              Syncwave{aiDj ? ` · DJ ${aiDj}` : ""}
+            </div>
           </div>
         </div>
+        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <Participants list={participants} />
+          <InstallButton />
+          <Button variant="outline" size="sm" onClick={copyLink} className="gap-1.5">
+            {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
+            <span className="hidden sm:inline">{copied ? "Copied" : "Share"}</span>
+          </Button>
+        </div>
+      </header>
 
-        <InstallBanner code={code} />
+      {/* ── body ── */}
+      <main className="relative flex min-h-0 flex-1 flex-col">
+        <div className="shrink-0 px-3 pt-3 md:hidden">
+          <TabBar tab={tab} setTab={setTab} queueCount={queue.length} unread={unread} />
+        </div>
+        <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col p-3 sm:p-4 md:grid md:h-full md:grid-cols-[1fr_360px] md:gap-4">
+          {/* left column: search + queue */}
+          <div
+            className={cn(
+              "min-h-0 flex-1 flex-col gap-3",
+              tab === "queue" || tab === "search" ? "flex" : "hidden",
+              "md:flex md:flex-initial md:h-full"
+            )}
+          >
+            <SearchPanel
+              onAdd={(track) => {
+                emit(EVENTS.QUEUE_ADD, { track });
+              }}
+              className={cn(tab === "search" ? "flex flex-1" : "hidden", "md:flex md:flex-none")}
+            />
+            <QueuePanel
+              queue={queue}
+              dl={dl}
+              isHost={isHost}
+              onRemove={(id) => emit(EVENTS.QUEUE_REMOVE, { id })}
+              className={cn(tab === "queue" ? "flex flex-1" : "hidden", "md:flex md:min-h-0 md:flex-1")}
+            />
+          </div>
 
-        <Player
-          current={current}
-          isPlaying={isPlaying}
-          position={position}
-          duration={current?.duration ?? 0}
-          isHost={isHost}
-          downloadPct={curDl}
-          buffering={buffering}
-          preparing={preparing}
-          skipVotes={skipVotes}
-          needVotes={needVotes}
-          onPlayPause={() => emit(EVENTS.CONTROL_PLAYPAUSE)}
-          onSkip={() => emit(EVENTS.CONTROL_SKIP)}
-          onSeek={(pos) => emit(EVENTS.CONTROL_SEEK, { position: pos })}
-          onVoteSkip={() => emit(EVENTS.VOTE_SKIP)}
-        />
-
-        {/* reaction bar */}
-        <div className="flex flex-wrap items-center gap-2">
-          {REACTIONS.map((e: string) => (
-            <button
-              key={e}
-              onClick={() => emit(EVENTS.REACTION, { emoji: e })}
-              className="grid size-10 place-items-center rounded-full border border-white/10 bg-white/5 text-lg transition-transform hover:scale-110 hover:bg-white/10 active:scale-95"
-              aria-label={`React ${e}`}
-            >
-              {e}
-            </button>
-          ))}
+          {/* right column: chat */}
+          <ChatPanel
+            chat={chat}
+            aiDj={aiDj}
+            onSend={(text) => emit(EVENTS.CHAT_SEND, { text })}
+            className={cn(tab === "chat" ? "flex flex-1" : "hidden", "md:flex md:h-full")}
+          />
         </div>
 
-        <SearchPanel onAdd={(track) => emit(EVENTS.QUEUE_ADD, { track })} />
+        <div className="px-3 pb-2 md:mx-auto md:w-full md:max-w-6xl md:px-4">
+          <InstallBanner code={code} />
+        </div>
+      </main>
 
-        <div className="sw-glass p-5">
-          <div className="mb-3 flex items-center gap-2 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
-            <ListMusic className="size-3.5" /> Up Next ({queue.length})
+      {/* ── fixed bottom player ── */}
+      <BottomPlayer
+        current={current}
+        isPlaying={isPlaying}
+        position={position}
+        duration={current?.duration ?? 0}
+        isHost={isHost}
+        downloadPct={curDl}
+        buffering={buffering}
+        preparing={preparing}
+        shuffle={shuffle}
+        repeat={repeat}
+        skipVotes={skipVotes}
+        needVotes={needVotes}
+        onPlayPause={() => emit(EVENTS.CONTROL_PLAYPAUSE)}
+        onSkip={() => emit(EVENTS.CONTROL_SKIP)}
+        onSeek={(pos) => emit(EVENTS.CONTROL_SEEK, { position: pos })}
+        onVoteSkip={() => emit(EVENTS.VOTE_SKIP)}
+        onShuffle={() => emit(EVENTS.CONTROL_SHUFFLE)}
+        onRepeat={() => emit(EVENTS.CONTROL_REPEAT)}
+        onReact={(emoji) => emit(EVENTS.REACTION, { emoji })}
+      />
+    </div>
+  );
+}
+
+// Segmented tab control (mobile).
+function TabBar({
+  tab,
+  setTab,
+  queueCount,
+  unread,
+}: {
+  tab: Tab;
+  setTab: (t: Tab) => void;
+  queueCount: number;
+  unread: number;
+}) {
+  const item = (id: Tab, icon: React.ReactNode, label: string, badge?: number) => (
+    <button
+      onClick={() => setTab(id)}
+      className={cn(
+        "relative flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-colors",
+        tab === id ? "bg-white/10 text-ink" : "text-muted hover:text-ink"
+      )}
+    >
+      {icon}
+      {label}
+      {badge ? (
+        <span className="grid min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold text-white">
+          {badge}
+        </span>
+      ) : null}
+    </button>
+  );
+  return (
+    <div className="flex items-center gap-1 rounded-full border border-white/8 bg-white/5 p-1">
+      {item("queue", <ListMusic className="size-4" />, "Queue", queueCount)}
+      {item("search", <SearchIcon className="size-4" />, "Add")}
+      {item("chat", <MessageSquare className="size-4" />, "Chat", unread)}
+    </div>
+  );
+}
+
+// Participants count with a click-to-open list.
+function Participants({ list }: { list: Participant[] }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-ink/80 transition-colors hover:bg-white/10"
+      >
+        <Users className="size-3.5" /> {list.length}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-10 z-50 w-48 rounded-2xl border border-white/10 bg-[var(--popover)] p-2 shadow-xl sw-fade-in">
+            <div className="mb-1 px-2 text-[10px] font-semibold tracking-eyebrow text-accent-2 uppercase">
+              Listening ({list.length})
+            </div>
+            <ul className="sw-scroll max-h-56 space-y-0.5 overflow-y-auto">
+              {list.map((p) => (
+                <li key={p.id} className="truncate rounded-lg px-2 py-1 text-sm text-ink">
+                  {p.isHost ? "★ " : ""}
+                  {p.nick}
+                </li>
+              ))}
+            </ul>
           </div>
-          {queue.length === 0 && <p className="text-sm text-muted">Queue is empty.</p>}
-          <ul className="flex flex-col gap-2">
-            {queue.map((t) => (
-              <li key={t.id} className="flex items-center gap-3">
-                {t.thumbnail && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={t.thumbnail} alt="" className="size-10 rounded object-cover" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-ink">{t.title}</div>
-                  <div className="truncate text-xs text-muted">
-                    {t.artist} · {t.addedBy}
-                  </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function QueuePanel({
+  queue,
+  dl,
+  isHost,
+  onRemove,
+  className,
+}: {
+  queue: Track[];
+  dl: Record<string, number>;
+  isHost: boolean;
+  onRemove: (id: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("min-h-0 flex-col sw-glass p-3 sm:p-4", className)}>
+      <div className="mb-2 flex shrink-0 items-center gap-2 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
+        <ListMusic className="size-3.5" /> Up Next ({queue.length})
+      </div>
+      {queue.length === 0 ? (
+        <div className="grid flex-1 place-items-center py-8 text-center text-sm text-muted">
+          Queue is empty — add a song.
+        </div>
+      ) : (
+        <ul className="sw-scroll flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
+          {queue.map((t) => (
+            <li key={t.id} className="flex items-center gap-3 rounded-xl p-1.5 hover:bg-white/5">
+              {t.thumbnail ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={t.thumbnail} alt="" className="size-10 shrink-0 rounded-lg object-cover" />
+              ) : (
+                <div className="size-10 shrink-0 rounded-lg bg-white/5" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-ink">{t.title}</div>
+                <div className="truncate text-xs text-muted">
+                  {t.artist}
+                  {t.addedBy ? ` · ${t.addedBy}` : ""}
                 </div>
-                <QueueStatus status={t.status} live={dl[t.videoId]} />
-                {isHost && (
-                  <button
-                    className="text-xs text-muted hover:text-[var(--destructive)]"
-                    onClick={() => emit(EVENTS.QUEUE_REMOVE, { id: t.id })}
-                  >
-                    ✕
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      <aside className="flex flex-col gap-4 md:max-h-[calc(100vh-2rem)]">
-        <div className="sw-glass p-4">
-          <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
-            <Users className="size-3.5" /> Listening ({participants.length})
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {participants.map((p) => (
-              <span key={p.id} className="rounded-full bg-field px-3 py-1 text-sm text-ink">
-                {p.isHost ? "★ " : ""}
-                {p.nick}
-              </span>
-            ))}
-          </div>
-        </div>
-        <ChatPanel chat={chat} onSend={(text) => emit(EVENTS.CHAT_SEND, { text })} aiDj={aiDj} />
-      </aside>
-    </main>
+              </div>
+              <QueueStatus status={t.status} live={dl[t.videoId]} />
+              {isHost && (
+                <button
+                  className="shrink-0 rounded-full p-1 text-muted transition-colors hover:bg-white/10 hover:text-[var(--destructive)]"
+                  onClick={() => t.id && onRemove(t.id)}
+                  aria-label="Remove"
+                >
+                  <X className="size-3.5" />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
 function QueueStatus({ status, live }: { status?: Status; live?: number }) {
   const pct = live ?? status?.percent ?? 0;
   const state = live != null && live < 100 ? "downloading" : status?.state ?? "pending";
-  if (state === "cached")
-    return <Check className="size-4 text-[var(--accent-2)]" aria-label="ready" />;
+  if (state === "cached") return <Check className="size-4 shrink-0 text-[var(--accent-2)]" aria-label="ready" />;
   if (state === "downloading")
     return (
-      <span className="flex items-center gap-1 font-mono text-xs text-accent-2">
+      <span className="flex shrink-0 items-center gap-1 font-mono text-xs text-accent-2">
         <Loader2 className="size-3.5 animate-spin" />
         {pct}%
       </span>
     );
-  return <Clock className="size-4 text-muted" aria-label="queued" />;
+  return <Clock className="size-4 shrink-0 text-muted" aria-label="queued" />;
 }
 
 function ChatPanel({
   chat,
   onSend,
   aiDj,
+  className,
 }: {
   chat: ChatMsg[];
   onSend: (t: string) => void;
   aiDj: string | null;
+  className?: string;
 }) {
   const [text, setText] = useState("");
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -405,11 +539,11 @@ function ChatPanel({
     setText("");
   };
   return (
-    <div className="flex min-h-[340px] flex-1 flex-col sw-glass p-4 md:min-h-0">
-      <div className="mb-2 flex items-center gap-2 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
+    <div className={cn("min-h-0 flex-col sw-glass p-3 sm:p-4", className)}>
+      <div className="mb-2 flex shrink-0 items-center gap-2 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
         <MessageSquare className="size-3.5" /> Chat
       </div>
-      <div className="sw-scroll flex-1 space-y-1 overflow-y-auto pr-1 text-sm">
+      <div className="sw-scroll min-h-0 flex-1 space-y-1 overflow-y-auto pr-1 text-sm">
         {chat.map((m) => (
           <div key={m.id} className={m.system ? "text-xs italic text-muted" : ""}>
             {m.system ? (
@@ -427,15 +561,15 @@ function ChatPanel({
         ))}
         <div ref={endRef} />
       </div>
-      <div className="mt-2 flex gap-2">
+      <div className="mt-2 flex shrink-0 gap-2">
         <Input
-          placeholder={aiDj ? `say something · /dj <request>` : "say something…"}
+          placeholder={aiDj ? `message · /dj <request>` : "say something…"}
           value={text}
           maxLength={500}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && send()}
         />
-        <Button variant="accent" onClick={send}>
+        <Button variant="accent" onClick={send} className="px-4">
           Send
         </Button>
       </div>

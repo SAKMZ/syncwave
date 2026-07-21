@@ -4,12 +4,11 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/cn"
 
-/* Retuned for Syncwave's aesthetic: sharp corners, JetBrains Mono,
-   uppercase letter-spaced labels, 1px ink borders, no shadows. The `variant`
-   names map to the legacy `.btn` tones (default/outline, solid, accent,
-   destructive = danger, ghost). */
+/* Syncwave's aesthetic: fully rounded pills, uppercase letter-spaced labels,
+   1px borders, no shadows. The `variant` names map to tones
+   (default/outline, solid, accent, destructive = danger, ghost). */
 const buttonVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-1.5 text-[10px] font-bold tracking-[0.2em] whitespace-nowrap uppercase transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0",
+  "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full text-[10px] font-bold tracking-[0.2em] whitespace-nowrap uppercase transition-colors focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-40 [&_svg]:pointer-events-none [&_svg]:size-3.5 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
