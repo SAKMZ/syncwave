@@ -35,6 +35,9 @@ a study room, a Discord community's permanent hangout.
   client's audio position, so nobody drifts out of sync.
 - 🔗 **One-link rooms** — create a room, share the code or URL, done. No accounts.
 - ➕ **Shared queue** — anyone in the room can search and add tracks.
+- 🎚️ **Familiar player** — a Spotify / YouTube-Music-style bottom player with
+  **shuffle** and **repeat (off / all / one)** as shared room controls, plus
+  play/pause, skip, and a scrubber. The host drives; everyone stays in sync.
 - 🗳️ **Vote-to-skip** — the room decides when to move on; the host can always drive.
 - 💬 **Live chat + 🎉 floating reactions** — talk and drop emoji that float up the
   screen for everyone in real time.
@@ -46,8 +49,9 @@ a study room, a Discord community's permanent hangout.
 - 📱 **Installable PWA** — install a room to your home screen and it opens
   **straight back into that room** (per-room manifest), no code re-entry. Great for
   permanent community rooms. *(Install requires HTTPS — see [DEPLOY.md](DEPLOY.md).)*
-- 🎨 **Immersive UI** — aurora backdrop, album-art ambient glow, glassmorphism, an
-  animated equalizer, and a proper mobile layout.
+- 📲 **Mobile-first UI** — a compact app shell (fixed top bar + bottom player,
+  tabbed Queue / Add / Chat) that fits a phone screen, plus an aurora backdrop,
+  album-art ambient glow, and glassmorphism.
 - 🐳 **One-container deploy** — Next.js + realtime server + audio resolver in a
   single Docker image.
 
