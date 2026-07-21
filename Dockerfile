@@ -10,8 +10,10 @@ WORKDIR /app
 
 # Install deps first for better layer caching. postinstall fetches the yt-dlp
 # binary; the build step needs devDependencies, so install everything.
+# yt-dlp ships as a self-contained binary, so skip youtube-dl-exec's build-time
+# Python check (the slim image has no `python`; none is needed at runtime).
 COPY package.json package-lock.json* ./
-RUN npm install
+RUN YOUTUBE_DL_SKIP_PYTHON_CHECK=1 npm install
 
 # App source + production build (Next fetches the Sora font at build time).
 COPY . .
