@@ -14,6 +14,8 @@ Runs anywhere Docker does.
 ![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker-2496ed.svg?logo=docker&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8.svg)
 
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
+
 </div>
 
 ---
@@ -78,7 +80,37 @@ npm run dev                # http://localhost:3000
 
 Requires **Node 20+** and **ffmpeg** on your PATH (yt-dlp uses it to extract audio).
 
-## Deploy (Docker / VPS)
+## Deploy
+
+Syncwave is **stateful** — a long-lived WebSocket server, live yt-dlp processes,
+and a disk cache — so it needs an always-on host with a persistent disk. It does
+**not** run on Vercel, Netlify, or any serverless platform. Two easy paths:
+
+### 🚀 One click — Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
+
+Render reads [`render.yaml`](render.yaml) and provisions the container, a
+persistent disk, and HTTPS for you. You get a `https://…onrender.com` link where
+**Install app** works right away. Needs a paid instance (~$7/mo) — free instances
+have no disk and sleep when idle, which would drop everyone in the room.
+
+### 🖥️ One command — your own VPS
+
+<!-- affiliate-link -->
+More control, more disk for the audio cache, and cheaper as you grow. Spin up an
+Ubuntu box (a 1 vCPU / 4 GB [Hostinger VPS](https://www.hostinger.com/vps-hosting)
+runs it comfortably from ~$5/mo) and run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/SAKMZ/syncwave/main/scripts/install.sh | sudo bash
+```
+
+Add `DOMAIN=music.example.com EMAIL=you@example.com` to also get automatic HTTPS
+via Caddy. Hostinger users can skip the SSH step entirely with the
+[post-install script](scripts/hostinger-post-install.sh).
+
+### 🐳 Anywhere else — Docker
 
 ```bash
 cp .env.example .env       # set PUBLIC_URL=https://your.domain (or http://IP:3000)
@@ -86,26 +118,26 @@ docker compose up -d --build
 ```
 
 Data persists in two bind-mounts: `./data` (rooms + settings) and `./cache`
-(resolved audio). Full instructions — reverse proxy / HTTPS, cookies for datacenter
-IPs — are in **[DEPLOY.md](DEPLOY.md)**.
+(resolved audio).
+
+**Full instructions** — reverse proxies, HTTPS, Tailscale, and YouTube cookies for
+datacenter IPs — are in **[DEPLOY.md](DEPLOY.md)**.
 
 > **Reliability note:** yt-dlp is frequently bot-checked from datacenter IPs. If
 > playback fails on a VPS, export a `cookies.txt` from a logged-in YouTube session,
 > mount it into the container, and set `YTDLP_COOKIES_FILE=/app/cookies.txt`.
 
-> Syncwave needs a long-lived WebSocket server, live yt-dlp processes, and a disk
-> cache — so it runs on a VPS or home server, **not** on serverless platforms
-> (Vercel/Netlify).
-
 ## Configuration
 
 Copy `.env.example` to `.env`. Key settings:
 
-| Variable             | What it does                                                    |
-| -------------------- | --------------------------------------------------------------- |
-| `PUBLIC_URL`         | Base URL used in share links (set this on any real deployment). |
-| `PORT`               | Port to listen on (default `3000`).                             |
-| `YTDLP_COOKIES_FILE` | Path to a YouTube `cookies.txt` (helps on datacenter IPs).      |
+| Variable             | What it does                                                                 |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `PUBLIC_URL`         | Base URL of the instance. Falls back to `RENDER_EXTERNAL_URL` on Render.     |
+| `PORT`               | Port to listen on (default `3000`).                                          |
+| `DATA_DIR`           | Where rooms/settings JSON lives (default `./data`).                          |
+| `CACHE_DIR`          | Where resolved audio is cached (default `./cache`).                          |
+| `YTDLP_COOKIES_FILE` | Path to a YouTube `cookies.txt` (helps on datacenter IPs).                   |
 
 The **AI DJ** (provider, model, API key, persona) is configured at runtime in the
 in-app **Setup** console — no restart or rebuild needed.

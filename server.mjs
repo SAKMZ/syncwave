@@ -24,8 +24,12 @@ const server = createServer((req, res) => {
   handle(req, res);
 });
 
+// RENDER_EXTERNAL_URL is injected automatically by Render, so a one-click deploy
+// gets a correct origin without the user setting anything.
+const publicUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || "";
+
 const io = new IOServer(server, {
-  cors: { origin: process.env.PUBLIC_URL || true },
+  cors: { origin: publicUrl || true },
 });
 registerRoomHandlers(io);
 

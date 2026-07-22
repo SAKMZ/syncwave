@@ -1,0 +1,36 @@
+# Syncwave — Render Blueprint (one-click deploy)
+# Spec: https://render.com/docs/blueprint-spec
+#
+# Syncwave is a stateful app: a long-lived Socket.io server, live yt-dlp
+# processes, and a disk cache. That means it needs a paid instance with a
+# persistent disk — Render's free instances spin down when idle and have no
+# disk, which would drop every listener and wipe every room.
+
+services:
+  - type: web
+    name: syncwave
+    runtime: docker
+    plan: starter
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    autoDeployTrigger: commit
+
+    # Rooms, settings, and cached audio live here so they survive deploys.
+    disk:
+      name: syncwave-data
+      mountPath: /var/syncwave
+      sizeGB: 5
+
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3000"
+      # Point both stores at the persistent disk (the image defaults to
+      # /app/data + /app/cache, which is ephemeral on Render).
+      - key: DATA_DIR
+        value: /var/syncwave/data
+      - key: CACHE_DIR
+        value: /var/syncwave/cache
+      # PUBLIC_URL is intentionally omitted: the server falls back to
+      # RENDER_EXTERNAL_URL, which Render injects with the real https:// URL.
