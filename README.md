@@ -14,6 +14,7 @@ Runs anywhere Docker does.
 ![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker-2496ed.svg?logo=docker&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8.svg)
 
+[![Deploy on Railway](https://img.shields.io/badge/Deploy%20on-Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)](DEPLOY.md#option-a--railway-one-click)
 [![Deploy to Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
 [![Deploy to Hostinger](https://img.shields.io/badge/Deploy%20to-Hostinger-673DE6?style=for-the-badge&logo=hostinger&logoColor=white)](HOSTINGER.md)
 
@@ -86,6 +87,16 @@ Requires **Node 20+** and **ffmpeg** on your PATH (yt-dlp uses it to extract aud
 Syncwave is **stateful** — a long-lived WebSocket server, live yt-dlp processes,
 and a disk cache — so it needs an always-on host with a persistent disk. It does
 **not** run on Vercel, Netlify, or any serverless platform. Two easy paths:
+
+### 🚂 Fastest start — Railway (free $5 trial)
+
+[![Deploy on Railway](https://img.shields.io/badge/Deploy%20on-Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)](https://railway.com/new)
+
+The only path that gets you a live HTTPS instance **without entering a card**.
+Click → **GitHub Repository** → `SAKMZ/syncwave`. Railway reads
+[`railway.json`](railway.json) and picks up the volume and env vars from
+[`render.yaml`](render.yaml) automatically.
+**[Full steps + what to check afterwards →](DEPLOY.md#option-a--railway-one-click)**
 
 ### 🚀 One click — Render
 

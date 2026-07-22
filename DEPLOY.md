@@ -7,21 +7,65 @@ disk cache — so it needs a real always-on host with a persistent disk. It will
 
 ## Pick a path
 
-| | [**Render**](#option-a--render-one-click) | [**Hostinger VPS**](#option-b--hostinger-vps-one-command) | [**Your own server**](#option-c--any-server-manual-docker) |
-|---|---|---|---|
-| Effort | One click | One command | Manual |
-| Server admin | None (managed) | You (root) | You |
-| HTTPS | Automatic | Automatic with a domain | You set it up |
-| Cost | ~$7/mo + disk | from ~$5/mo | Free (a spare box) |
-| Best for | Trying it out, small rooms, zero-ops | Big libraries, many rooms, full control | Home lab / NAS / Pi |
+| | [**Railway**](#option-a--railway-one-click) | [**Render**](#option-b--render-one-click) | [**Hostinger VPS**](#option-c--hostinger-vps-one-command) | [**Your own server**](#option-d--any-server-manual-docker) |
+|---|---|---|---|---|
+| Effort | One click | One click | One command | Manual |
+| Server admin | None (managed) | None (managed) | You (root) | You |
+| HTTPS | Automatic | Automatic | Automatic with a domain | You set it up |
+| Free trial | **Yes — $5** | No | No | — |
+| Cost after | usage-based, ~$5/mo min | ~$7/mo + disk | from ~$5/mo | Free (a spare box) |
+| Best for | Trying it out today | Predictable flat pricing | Big libraries, full control | Home lab / NAS / Pi |
 
-Both hosted paths give you the same app. Render is the fastest way to get a
-working HTTPS link; a VPS is cheaper per GB of audio cache, lets you supply a
+All four give you the same app. **Railway is the quickest start** — it has a free
+trial, so you can have a working HTTPS link without entering a card. Render bills
+a flat monthly rate. A VPS is cheapest per GB of audio cache, lets you supply a
 YouTube cookies file, and lets you run other things on the same box.
+
+> **Heads up on managed platforms:** Syncwave keeps room state in the server
+> process, so it must run as **exactly one instance**. Don't scale it to multiple
+> replicas — you'd get several disconnected copies of the same room rather than
+> more capacity. Both `railway.json` and `render.yaml` already pin this.
 
 ---
 
-## Option A — Render (one-click)
+## Option A — Railway (one-click)
+
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new)
+
+Railway gives new accounts a **$5 trial**, so this is the only path that gets you
+a live HTTPS instance without a payment method.
+
+1. Click the button → **GitHub Repository** → `SAKMZ/syncwave` (fork it first if
+   you want to customise).
+2. Railway reads [`railway.json`](railway.json) for the build and health check —
+   and helpfully also picks up the volume mount and environment variables from
+   [`render.yaml`](render.yaml), so the volume lands at `/var/syncwave` with
+   `DATA_DIR` and `CACHE_DIR` already pointed into it.
+3. Wait for the Docker build (a few minutes — it installs ffmpeg, python3, and
+   builds Next).
+
+You get a `https://<name>.up.railway.app` URL with HTTPS out of the box, so the
+**Install app** (PWA) prompt works immediately.
+
+**Check these after your first deploy**
+
+- **Volume.** Confirm a volume is mounted at `/var/syncwave`, and that
+  `DATA_DIR=/var/syncwave/data` and `CACHE_DIR=/var/syncwave/cache`. Without it,
+  every redeploy wipes your rooms and cached audio.
+- **Volume size.** Railway's default is small (500 MB ≈ 100 cached tracks). Bump
+  it under the volume's **Settings → Size** if you want a deeper cache.
+- **Replicas.** Leave at 1 (see the note above).
+- **Trial limits.** The $5 trial expires — add a plan before you share the link
+  anywhere permanent, or the instance stops.
+- **Playback needs cookies here.** Railway runs on datacenter IPs, which YouTube
+  bot-checks. Rooms, search, sync, and chat all work immediately, but tracks will
+  fail to resolve until you supply a YouTube session — see
+  [Reliability: YouTube cookies](#reliability-youtube-cookies). This is not a
+  Railway fault; it applies to every cloud host.
+
+---
+
+## Option B — Render (one-click)
 
 [![Deploy to Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
 
@@ -58,7 +102,7 @@ You get a `https://<name>.onrender.com` URL that is HTTPS out of the box — so 
 
 ---
 
-## Option B — Hostinger VPS (one command)
+## Option C — Hostinger VPS (one command)
 
 [![Deploy to Hostinger](https://img.shields.io/badge/Deploy%20to-Hostinger-673DE6?style=for-the-badge&logo=hostinger&logoColor=white)](HOSTINGER.md)
 
@@ -72,7 +116,7 @@ Grab a VPS (**KVM 1** — 1 vCPU / 4 GB RAM / 50 GB — is plenty for a room or 
 from [Hostinger](https://www.hostinger.com/in?REFERRALCODE=LUZAUTOMIP2T) and pick
 **Ubuntu 24.04** as the OS. Then either:
 
-### B1. Let the VPS install itself (true one-click)
+### C1. Let the VPS install itself (true one-click)
 
 In hPanel → **VPS → OS & Panel → Post-install scripts**, add the contents of
 [`scripts/hostinger-post-install.sh`](scripts/hostinger-post-install.sh), then
@@ -82,7 +126,7 @@ provisioning, Syncwave is already running.
 Set `DOMAIN` (and `EMAIL`) at the top of that script first if you have a domain
 pointed at the VPS — that gets you automatic HTTPS on first boot.
 
-### B2. Or SSH in and run one command
+### C2. Or SSH in and run one command
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/SAKMZ/syncwave/main/scripts/install.sh | sudo bash
@@ -109,7 +153,7 @@ docker compose down             # stop
 
 ---
 
-## Option C — Any server (manual Docker)
+## Option D — Any server (manual Docker)
 
 Works on any machine with Docker — another VPS provider, a home server, a NAS.
 
