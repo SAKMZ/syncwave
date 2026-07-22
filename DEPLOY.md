@@ -5,6 +5,27 @@ Syncwave runs as **one Docker container** (Next.js + Socket.io + yt-dlp). It is 
 disk cache — so it needs a real always-on host with a persistent disk. It will
 **not** run on Vercel, Netlify, Cloudflare Workers, or any serverless platform.
 
+> ## ⚠️ Read this before picking a host
+>
+> **YouTube blocks datacenter IPs, and cookies do not lift the block.** Tested on
+> Railway with a valid logged-in `cookies.txt`, a working JS runtime, and all
+> five yt-dlp player clients — every one returned *"Sign in to confirm you're not
+> a bot"*. The same code on a home/residential connection works with **no cookies
+> at all**.
+>
+> What this means in practice:
+>
+> | Host | Rooms, search, sync, chat | Actual playback |
+> |---|---|---|
+> | Home server / residential | ✅ | ✅ works out of the box |
+> | Residential-IP VPS | ✅ | ✅ usually, cookies help |
+> | Railway / Render / big-cloud VPS | ✅ | ❌ blocked unless you add a proxy |
+>
+> On a datacenter host your options are to set **`YTDLP_PROXY`** to a residential
+> proxy, or to run Syncwave somewhere with a residential IP. The one-click
+> deploys are great for trying the interface — they are not a reliable way to
+> actually listen to music.
+
 ## Pick a path
 
 | | [**Railway**](#option-a--railway-one-click) | [**Render**](#option-b--render-one-click) | [**Hostinger VPS**](#option-c--hostinger-vps-one-command) | [**Your own server**](#option-d--any-server-manual-docker) |
@@ -255,8 +276,20 @@ it lives with the rest of the durable data.
 > get it rate-limited or banned. Never put your main account on an instance other
 > people can reach.
 
-**Or supply it as a file** (takes precedence over an upload, and disables the
-upload button):
+**Cookies are not a fix for a blocked IP.** They help on residential and
+borderline connections. On Railway, Render, and most big-cloud VPS ranges the IP
+itself is blocked and cookies change nothing — see the warning at the top of this
+document. There, set:
+
+```
+YTDLP_PROXY=http://user:pass@residential-proxy.example:8000
+```
+
+yt-dlp routes every request through it, so YouTube sees the proxy's residential
+IP instead of the datacenter's.
+
+**Or supply the cookies as a file** (takes precedence over an upload, and
+disables the upload button):
 
 - **Docker / VPS:** put it next to `docker-compose.yml` as `cookies.txt`,
   uncomment the cookies volume, set `YTDLP_COOKIES_FILE=/app/cookies.txt` in
@@ -272,7 +305,8 @@ upload button):
 | `PORT` | Port to listen on (default `3000`). |
 | `DATA_DIR` | Where rooms/settings JSON lives (default `./data`). |
 | `CACHE_DIR` | Where resolved audio is cached (default `./cache`). |
-| `YTDLP_COOKIES_FILE` | Path to a YouTube `cookies.txt`. |
+| `YTDLP_COOKIES_FILE` | Path to a YouTube `cookies.txt`. Takes precedence over an upload. |
+| `YTDLP_PROXY` | Proxy for all yt-dlp traffic. The only reliable fix on a datacenter IP. |
 
 The **AI DJ** (provider, model, API key, persona) is configured at runtime in the
 in-app **Setup** console — no restart or rebuild needed.

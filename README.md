@@ -149,11 +149,23 @@ optionally upload a YouTube `cookies.txt`, optionally switch on the AI DJ. **Do
 this right away:** until a password is set, anyone who can reach the URL can claim
 it. Rooms themselves are unaffected; the password only guards configuration.
 
-> **Reliability note:** yt-dlp is frequently bot-checked from datacenter IPs
-> ("Sign in to confirm you're not a bot"), so tracks will fail to load on most
-> cloud hosts until you upload a `cookies.txt` in **`/admin` → YouTube access**.
-> Use a **throwaway Google account** — the file is a live login session and every
-> track the server fetches is attributed to it.
+> ### ⚠️ Where you host this decides whether music actually plays
+>
+> **YouTube blocks datacenter IPs, and cookies do not lift the block.** Verified
+> on Railway with valid logged-in cookies, a working JS runtime, and all five
+> yt-dlp player clients — every one was refused. The same build on a home
+> connection works with no cookies at all.
+>
+> - **Home server or residential-IP VPS** → playback works. This is the intended
+>   way to run Syncwave.
+> - **Railway / Render / big-cloud VPS** → rooms, search, sync, and chat all work,
+>   but tracks will not resolve unless you set `YTDLP_PROXY` to a residential
+>   proxy.
+>
+> A `cookies.txt` (uploaded at **`/admin` → YouTube access**) still helps on
+> borderline connections. Use a **throwaway Google account** — the file is a live
+> login session and every track the server fetches is attributed to it. Details in
+> [DEPLOY.md](DEPLOY.md).
 
 ## Configuration
 
