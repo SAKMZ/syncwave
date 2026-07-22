@@ -1,0 +1,180 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { Check, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+
+type Persona = { id: string; name: string; tagline: string };
+type Settings = {
+  llmProvider: string;
+  llmModel: string;
+  llmBaseUrl: string;
+  aiDjEnabled: boolean;
+  personaId: string;
+  hasApiKey?: boolean;
+};
+
+const selectCls =
+  "w-full rounded-md border border-input bg-field px-3 py-2 text-sm text-ink focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none";
+
+export default function AiDjSettings({
+  saveLabel = "Save settings",
+  onSaved,
+}: {
+  saveLabel?: string;
+  onSaved?: () => void;
+}) {
+  const [s, setS] = useState<Settings | null>(null);
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  const [apiKey, setApiKey] = useState("");
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/settings")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (!d) return;
+        setS(d.settings);
+        setPersonas(d.personas);
+      })
+      .catch(() => {});
+  }, []);
+
+  if (!s) return <p className="text-sm text-muted">Loading…</p>;
+
+  const set = (patch: Partial<Settings>) => setS({ ...s, ...patch });
+
+  async function save() {
+    if (!s) return;
+    setSaving(true);
+    const payload: Record<string, unknown> = {
+      llmProvider: s.llmProvider,
+      llmModel: s.llmModel,
+      llmBaseUrl: s.llmBaseUrl,
+      aiDjEnabled: s.aiDjEnabled,
+      personaId: s.personaId,
+    };
+    if (apiKey.trim()) payload.llmApiKey = apiKey.trim();
+    const res = await fetch("/api/settings", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      const d = await res.json();
+      setS(d.settings);
+      setApiKey("");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
+      onSaved?.();
+    }
+    setSaving(false);
+  }
+
+  return (
+    <div className="grid gap-6">
+      <section className="sw-glass p-6">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-ink">AI DJ</h2>
+            <p className="text-sm text-muted">
+              Announces tracks and takes <code className="text-accent-2">/dj</code> requests
+              in chat. Entirely optional.
+            </p>
+          </div>
+          <Switch
+            checked={s.aiDjEnabled}
+            onCheckedChange={(v: boolean) => set({ aiDjEnabled: v })}
+          />
+        </div>
+
+        {s.aiDjEnabled && (
+          <div className="mt-5">
+            <Label className="mb-1.5 block">Persona</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {personas.map((p) => (
+                <button
+                  key={p.id}
+                  onClick={() => set({ personaId: p.id })}
+                  className={`rounded-md border p-3 text-left transition-colors ${
+                    s.personaId === p.id
+                      ? "border-[var(--accent)] bg-accent-soft"
+                      : "border-soft-border hover:bg-white/5"
+                  }`}
+                >
+                  <div className="text-sm font-semibold text-ink">{p.name}</div>
+                  <div className="text-xs text-muted">{p.tagline}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+      </section>
+
+      {s.aiDjEnabled && (
+        <section className="sw-glass p-6">
+          <h2 className="mb-4 text-lg font-semibold text-ink">Language model</h2>
+          <div className="grid gap-4">
+            <div>
+              <Label className="mb-1.5 block">Provider</Label>
+              <select
+                className={selectCls}
+                value={s.llmProvider}
+                onChange={(e) => set({ llmProvider: e.target.value })}
+              >
+                <option value="ollama">Ollama (local)</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+              </select>
+            </div>
+            <div>
+              <Label className="mb-1.5 block">Model</Label>
+              <Input
+                value={s.llmModel}
+                onChange={(e) => set({ llmModel: e.target.value })}
+                placeholder="e.g. llama3.1 / gpt-4o-mini / claude-haiku-4-5"
+              />
+            </div>
+            {s.llmProvider === "ollama" ? (
+              <div>
+                <Label className="mb-1.5 block">Base URL</Label>
+                <Input
+                  value={s.llmBaseUrl}
+                  onChange={(e) => set({ llmBaseUrl: e.target.value })}
+                  placeholder="http://localhost:11434"
+                />
+              </div>
+            ) : (
+              <div>
+                <Label className="mb-1.5 block">
+                  API key {s.hasApiKey && <span className="text-accent-2">· saved</span>}
+                </Label>
+                <Input
+                  type="password"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={s.hasApiKey ? "•••••••• (leave blank to keep)" : "sk-…"}
+                />
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      <div>
+        <Button variant="accent" size="lg" onClick={save} disabled={saving} className="gap-1.5">
+          {saving ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : saved ? (
+            <Check className="size-4" />
+          ) : null}
+          {saved ? "Saved" : saving ? "Saving…" : saveLabel}
+        </Button>
+      </div>
+    </div>
+  );
+}
