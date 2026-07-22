@@ -14,7 +14,8 @@ Runs anywhere Docker does.
 ![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker-2496ed.svg?logo=docker&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8.svg)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
+[![Deploy to Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
+[![Deploy to Hostinger](https://img.shields.io/badge/Deploy%20to-Hostinger-673DE6?style=for-the-badge&logo=hostinger&logoColor=white)](HOSTINGER.md)
 
 </div>
 
@@ -88,7 +89,7 @@ and a disk cache — so it needs an always-on host with a persistent disk. It do
 
 ### 🚀 One click — Render
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
+[![Deploy to Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
 
 Render reads [`render.yaml`](render.yaml) and provisions the container, a
 persistent disk, and HTTPS for you. You get a `https://…onrender.com` link where
@@ -97,18 +98,22 @@ have no disk and sleep when idle, which would drop everyone in the room.
 
 ### 🖥️ One command — your own VPS
 
-<!-- affiliate-link -->
-More control, more disk for the audio cache, and cheaper as you grow. Spin up an
-Ubuntu box (a 1 vCPU / 4 GB [Hostinger VPS](https://www.hostinger.com/vps-hosting)
-runs it comfortably from ~$5/mo) and run:
+[![Deploy to Hostinger](https://img.shields.io/badge/Deploy%20to-Hostinger-673DE6?style=for-the-badge&logo=hostinger&logoColor=white)](HOSTINGER.md)
+
+More control, a much bigger audio cache, and cheaper as you grow. On any fresh
+Ubuntu box:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/SAKMZ/syncwave/main/scripts/install.sh | sudo bash
 ```
 
 Add `DOMAIN=music.example.com EMAIL=you@example.com` to also get automatic HTTPS
-via Caddy. Hostinger users can skip the SSH step entirely with the
-[post-install script](scripts/hostinger-post-install.sh).
+via Caddy. The installer handles Docker, the build, the reverse proxy, and the
+certificate — and re-running it updates in place.
+
+**[Full VPS walkthrough → HOSTINGER.md](HOSTINGER.md)** — including a
+[post-install script](scripts/hostinger-post-install.sh) that provisions the VPS
+with Syncwave already running, so you never have to SSH in at all.
 
 ### 🐳 Anywhere else — Docker
 

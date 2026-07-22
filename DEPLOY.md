@@ -23,7 +23,7 @@ YouTube cookies file, and lets you run other things on the same box.
 
 ## Option A — Render (one-click)
 
-[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
+[![Deploy to Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
 
 1. Click the button (fork the repo first if you want to customise it, then point
    the button at your fork).
@@ -60,13 +60,17 @@ You get a `https://<name>.onrender.com` URL that is HTTPS out of the box — so 
 
 ## Option B — Hostinger VPS (one command)
 
+[![Deploy to Hostinger](https://img.shields.io/badge/Deploy%20to-Hostinger-673DE6?style=for-the-badge&logo=hostinger&logoColor=white)](HOSTINGER.md)
+
 A VPS gives you root, a much bigger disk for the audio cache, a residential-ish
 IP pool that yt-dlp is happier with, and room to host other things alongside it.
 
-<!-- affiliate-link -->
+> **[HOSTINGER.md](HOSTINGER.md) is the full step-by-step walkthrough** — plan
+> choice, DNS, HTTPS, and troubleshooting. The short version follows.
+
 Grab a VPS (**KVM 1** — 1 vCPU / 4 GB RAM / 50 GB — is plenty for a room or two)
-from [Hostinger](https://www.hostinger.com/vps-hosting) and pick **Ubuntu 24.04**
-as the OS. Then either:
+from [Hostinger](https://www.hostinger.com/in?REFERRALCODE=LUZAUTOMIP2T) and pick
+**Ubuntu 24.04** as the OS. Then either:
 
 ### B1. Let the VPS install itself (true one-click)
 
@@ -197,3 +201,9 @@ you're not a bot"). If playback fails:
 
 The **AI DJ** (provider, model, API key, persona) is configured at runtime in the
 in-app **Setup** console — no restart or rebuild needed.
+
+---
+
+<sub>The Hostinger links in this document are referral links — signing up through
+them supports Syncwave's development at no extra cost to you. Syncwave is
+MIT-licensed and runs identically on any Ubuntu host.</sub>
