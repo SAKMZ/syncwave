@@ -24,9 +24,13 @@ const server = createServer((req, res) => {
   handle(req, res);
 });
 
-// RENDER_EXTERNAL_URL is injected automatically by Render, so a one-click deploy
-// gets a correct origin without the user setting anything.
-const publicUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || "";
+// Platforms inject their own public hostname, so a one-click deploy gets a
+// correct origin without the user setting anything. Railway gives a bare host,
+// Render gives a full URL.
+const railwayUrl = process.env.RAILWAY_PUBLIC_DOMAIN
+  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+  : "";
+const publicUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || railwayUrl || "";
 
 const io = new IOServer(server, {
   cors: { origin: publicUrl || true },
