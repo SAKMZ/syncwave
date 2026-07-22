@@ -220,18 +220,49 @@ installing it creates an app that launches straight back into that room.
 
 ---
 
+## First run — claim your instance
+
+The first time you open a new deployment, Syncwave sends you to **`/setup`** to
+create an admin password, optionally upload YouTube cookies, and optionally
+configure the AI DJ. Everything after that lives at **`/admin`**, behind that
+password.
+
+> **Do this immediately after deploying.** Until a password is set, anyone who
+> can reach the URL can claim the instance. Listening rooms are unaffected —
+> the password only guards configuration.
+
+Lost the password? Delete `data/admin.json` on the server and reload; setup runs
+again.
+
 ## Reliability: YouTube cookies
 
 yt-dlp is frequently bot-checked from VPS/datacenter IPs ("Sign in to confirm
-you're not a bot"). If playback fails:
+you're not a bot"). This is the single most common reason tracks fail to play on
+a cloud host.
 
-1. Export a `cookies.txt` from a logged-in YouTube session in your browser
-   (use a "Get cookies.txt" extension, Netscape format).
-2. **Docker / VPS:** put it next to `docker-compose.yml` as `cookies.txt`,
-   uncomment the cookies volume, set `YTDLP_COOKIES_FILE=/app/cookies.txt` in
-   `.env`, then `docker compose up -d`.
-3. **Render:** add it as a Secret File named `cookies.txt` and set
-   `YTDLP_COOKIES_FILE=/etc/secrets/cookies.txt` in the service's environment.
+**The easy way — upload it in the admin console:**
+
+1. Install a "Get cookies.txt LOCALLY" extension for Chrome or Firefox.
+2. Open `youtube.com` **signed in**, and export in **Netscape** format.
+3. Go to **`/admin` → YouTube access → Upload cookies.txt**.
+
+The file is validated on upload, stored `0600` in your data directory, and picked
+up on the very next track — no restart, no redeploy. It survives restarts because
+it lives with the rest of the durable data.
+
+> **Use a throwaway Google account.** A cookies file is a live login session:
+> every track the server fetches is requested as that account, and heavy use can
+> get it rate-limited or banned. Never put your main account on an instance other
+> people can reach.
+
+**Or supply it as a file** (takes precedence over an upload, and disables the
+upload button):
+
+- **Docker / VPS:** put it next to `docker-compose.yml` as `cookies.txt`,
+  uncomment the cookies volume, set `YTDLP_COOKIES_FILE=/app/cookies.txt` in
+  `.env`, then `docker compose up -d`.
+- **Render:** add it as a Secret File named `cookies.txt` and set
+  `YTDLP_COOKIES_FILE=/etc/secrets/cookies.txt` in the service's environment.
 
 ## Configuration reference
 

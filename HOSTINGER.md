@@ -119,7 +119,10 @@ existing install in place. Your rooms and cache are preserved.
 - **With a domain:** `https://music.example.com`
 - **Without:** `http://YOUR_VPS_IP:3000`
 
-Create a room, share the link, and you're done. On HTTPS you'll also see an
+The first visit sends you to **`/setup`** to create an admin password. **Do this
+immediately** — until you do, anyone who can reach the URL can claim the instance.
+
+Then create a room, share the link, and you're done. On HTTPS you'll also see an
 **Install this room** banner — installing it creates an app that launches
 straight back into that specific room.
 
@@ -146,14 +149,15 @@ Your data lives in two folders that survive every rebuild:
 
 **Tracks get skipped immediately / "Sign in to confirm you're not a bot"**
 
-YouTube bot-checks datacenter IPs. Fix it with a cookies file:
+YouTube bot-checks datacenter IPs. Fix it with a cookies file — no SSH needed:
 
-1. Install a "Get cookies.txt" browser extension, log in to YouTube, export
-   `cookies.txt` (Netscape format).
-2. Upload it to `/opt/syncwave/cookies.txt`.
-3. In `/opt/syncwave/docker-compose.yml`, uncomment the cookies volume line.
-4. In `/opt/syncwave/.env`, set `YTDLP_COOKIES_FILE=/app/cookies.txt`.
-5. `docker compose up -d`
+1. Install a "Get cookies.txt LOCALLY" browser extension, log in to YouTube, and
+   export `cookies.txt` (Netscape format).
+2. Go to **`/admin` → YouTube access → Upload cookies.txt**.
+
+It takes effect on the very next track. **Use a throwaway Google account** — the
+file is a live login session, and every track this server fetches is requested as
+that account.
 
 **No "Install app" button**
 

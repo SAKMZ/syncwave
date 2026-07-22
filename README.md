@@ -45,6 +45,9 @@ a study room, a Discord community's permanent hangout.
 - 🗳️ **Vote-to-skip** — the room decides when to move on; the host can always drive.
 - 💬 **Live chat + 🎉 floating reactions** — talk and drop emoji that float up the
   screen for everyone in real time.
+- 🔐 **Guided first-run setup** — a `/setup` wizard claims the instance with an
+  admin password, then a password-protected `/admin` console handles YouTube
+  access and the AI DJ. No config files to edit.
 - 🤖 **Optional AI DJ** — an opt-in host with swappable LLM providers
   (OpenAI / Anthropic / local Ollama) and selectable personas. Degrades gracefully
   if it's off or misconfigured.
@@ -139,9 +142,18 @@ Data persists in two bind-mounts: `./data` (rooms + settings) and `./cache`
 **Full instructions** — reverse proxies, HTTPS, Tailscale, and YouTube cookies for
 datacenter IPs — are in **[DEPLOY.md](DEPLOY.md)**.
 
-> **Reliability note:** yt-dlp is frequently bot-checked from datacenter IPs. If
-> playback fails on a VPS, export a `cookies.txt` from a logged-in YouTube session,
-> mount it into the container, and set `YTDLP_COOKIES_FILE=/app/cookies.txt`.
+### After deploying
+
+Open your instance and it walks you through **`/setup`** — set an admin password,
+optionally upload a YouTube `cookies.txt`, optionally switch on the AI DJ. **Do
+this right away:** until a password is set, anyone who can reach the URL can claim
+it. Rooms themselves are unaffected; the password only guards configuration.
+
+> **Reliability note:** yt-dlp is frequently bot-checked from datacenter IPs
+> ("Sign in to confirm you're not a bot"), so tracks will fail to load on most
+> cloud hosts until you upload a `cookies.txt` in **`/admin` → YouTube access**.
+> Use a **throwaway Google account** — the file is a live login session and every
+> track the server fetches is attributed to it.
 
 ## Configuration
 
