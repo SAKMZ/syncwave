@@ -11,8 +11,12 @@ import {
   Loader2,
   Disc3,
   Smile,
+  Volume1,
+  Volume2,
+  VolumeX,
 } from "lucide-react";
 import { REACTIONS } from "@/lib/protocol.mjs";
+import { cn } from "@/lib/cn";
 
 type Track = {
   videoId: string;
@@ -42,6 +46,8 @@ export default function BottomPlayer({
   repeat,
   skipVotes,
   needVotes,
+  volume,
+  onVolume,
   onPlayPause,
   onSkip,
   onSeek,
@@ -62,6 +68,8 @@ export default function BottomPlayer({
   repeat: "off" | "one" | "all";
   skipVotes: number;
   needVotes: number;
+  volume: number;
+  onVolume: (v: number) => void;
   onPlayPause: () => void;
   onSkip: () => void;
   onSeek: (pos: number) => void;
@@ -75,11 +83,13 @@ export default function BottomPlayer({
   const cachePct = downloadPct ?? 0;
   const playPct = dur ? Math.min(100, (position / dur) * 100) : 0;
   const loading = preparing || buffering;
+  const canSeek = isHost && dur > 0 && !preparing;
 
   const seek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isHost || !dur || preparing) return;
+    if (!canSeek) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    onSeek(((e.clientX - rect.left) / rect.width) * dur);
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    onSeek(ratio * dur);
   };
 
   const react = (emoji: string) => {
@@ -87,29 +97,20 @@ export default function BottomPlayer({
     setReactOpen(false);
   };
 
-  return (
-    <footer className="relative z-40 shrink-0 border-t border-white/10 bg-[color-mix(in_srgb,var(--bg)_82%,transparent)] backdrop-blur-xl">
-      {/* seek / progress line spanning the whole bar */}
-      <div
-        className={`group relative h-1 w-full bg-white/10 ${isHost && !preparing ? "cursor-pointer" : ""}`}
-        onClick={seek}
-      >
-        <div
-          className={`sw-accent-bar absolute inset-y-0 left-0 ${preparing ? "transition-[width] duration-300" : ""}`}
-          style={{ width: `${preparing ? cachePct : playPct}%` }}
-        />
-        {isHost && !preparing && (
-          <div
-            className="absolute top-1/2 size-3 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white opacity-0 shadow-[0_0_10px_var(--accent)] transition-opacity group-hover:opacity-100"
-            style={{ left: `${playPct}%` }}
-          />
-        )}
-      </div>
+  const status = preparing
+    ? cachePct >= 100
+      ? "Processing audio…"
+      : `Caching audio — ${cachePct}%`
+    : buffering
+      ? "Buffering…"
+      : current?.artist;
 
-      <div className="mx-auto flex max-w-6xl items-center gap-2 px-3 py-2.5 sm:gap-4 sm:px-4">
-        {/* now playing */}
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <div className="relative size-11 shrink-0 overflow-hidden rounded-lg sm:size-12">
+  return (
+    <footer className="relative z-40 shrink-0 border-t border-white/10 bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-2xl">
+      <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5 px-3 py-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-4 md:px-5 md:py-3">
+        {/* ── left: track identity ── */}
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="relative size-11 shrink-0 overflow-hidden rounded-xl border border-white/10 sm:size-14">
             {current?.thumbnail ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={current.thumbnail} alt="" className="size-full object-cover" />
@@ -119,7 +120,7 @@ export default function BottomPlayer({
               </div>
             )}
             {loading && (
-              <div className="absolute inset-0 grid place-items-center bg-black/55">
+              <div className="absolute inset-0 grid place-items-center bg-black/60">
                 <Loader2 className="size-5 animate-spin text-white" />
               </div>
             )}
@@ -128,94 +129,135 @@ export default function BottomPlayer({
             <div className="truncate text-sm font-semibold text-ink">
               {current ? current.title : "Nothing playing"}
             </div>
-            <div className="truncate text-xs text-muted">
-              {preparing
-                ? cachePct >= 100
-                  ? "Processing audio…"
-                  : `Caching audio — ${cachePct}%`
-                : current
-                  ? current.artist
-                  : "Add a song to start"}
+            <div
+              className={cn(
+                "truncate text-xs",
+                preparing || buffering ? "text-accent-2" : "text-muted"
+              )}
+            >
+              {status ?? "Add a song to start"}
             </div>
           </div>
-          {/* time (desktop) */}
-          {current && !preparing && (
-            <div className="hidden shrink-0 font-mono text-xs text-muted md:block">
-              {fmt(position)} / {fmt(dur)}
-            </div>
-          )}
         </div>
 
-        {/* controls */}
-        <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
-          <IconToggle
-            active={shuffle}
-            disabled={!isHost}
-            onClick={onShuffle}
-            label="Shuffle"
-          >
-            <Shuffle className="size-4" />
-          </IconToggle>
+        {/* ── centre: transport + scrubber ── */}
+        <div className="order-3 col-span-2 flex flex-col items-center gap-0.5 md:order-none md:col-span-1 md:w-[min(46vw,520px)] md:gap-1">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <IconToggle active={shuffle} disabled={!isHost} onClick={onShuffle} label="Shuffle">
+              <Shuffle className="size-4" />
+            </IconToggle>
 
-          {isHost ? (
-            <button
-              onClick={onPlayPause}
-              disabled={preparing || !current}
-              className="grid size-10 place-items-center rounded-full bg-gradient-to-br from-[var(--accent)] to-[#6b3ff0] text-white shadow-[0_6px_20px_-6px_var(--accent)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-40 disabled:hover:scale-100"
-              aria-label={isPlaying ? "Pause" : "Play"}
+            {isHost ? (
+              <button
+                onClick={onPlayPause}
+                disabled={preparing || !current}
+                className="grid size-11 place-items-center rounded-full bg-white text-[#0b0b12] shadow-[0_4px_18px_-4px_rgba(255,255,255,0.45)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
+                aria-label={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? (
+                  <Pause className="size-5" fill="currentColor" />
+                ) : (
+                  <Play className="size-5 translate-x-px" fill="currentColor" />
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={onVoteSkip}
+                disabled={!current}
+                className="flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-sm font-semibold text-ink/85 transition-colors hover:bg-white/10 disabled:opacity-30"
+                aria-label="Vote to skip"
+                title="Vote to skip this track"
+              >
+                <SkipForward className="size-4" />
+                <span className="font-mono text-xs">
+                  {skipVotes}/{needVotes}
+                </span>
+              </button>
+            )}
+
+            {isHost && (
+              <button
+                onClick={onSkip}
+                disabled={!current}
+                className="grid size-9 place-items-center rounded-full text-ink/70 transition-colors hover:bg-white/10 hover:text-ink disabled:opacity-30"
+                aria-label="Next track"
+                title="Next track"
+              >
+                <SkipForward className="size-4" />
+              </button>
+            )}
+
+            <IconToggle
+              active={repeat !== "off"}
+              disabled={!isHost}
+              onClick={onRepeat}
+              label={
+                repeat === "one"
+                  ? "Repeat: this track"
+                  : repeat === "all"
+                    ? "Repeat: queue"
+                    : "Repeat: off"
+              }
             >
-              {isPlaying ? <Pause className="size-5" /> : <Play className="size-5 translate-x-0.5" />}
-            </button>
-          ) : (
-            <button
-              onClick={onVoteSkip}
-              disabled={!current}
-              className="grid size-10 place-items-center rounded-full border border-white/15 text-ink/80 transition-colors hover:bg-white/10 disabled:opacity-40"
-              aria-label="Vote to skip"
-              title={`Vote skip (${skipVotes}/${needVotes})`}
+              {repeat === "one" ? <Repeat1 className="size-4" /> : <Repeat className="size-4" />}
+            </IconToggle>
+          </div>
+
+          {/* Scrubber. Shows download progress while the track is still caching,
+              which is why the room isn't playing yet. */}
+          <div className="flex w-full items-center gap-2">
+            <span className="w-9 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted">
+              {fmt(position)}
+            </span>
+            <div
+              className={cn("sw-seek flex-1", !canSeek && "cursor-default")}
+              onClick={seek}
+              role={canSeek ? "slider" : undefined}
+              aria-label={canSeek ? "Seek" : undefined}
+              aria-valuemin={canSeek ? 0 : undefined}
+              aria-valuemax={canSeek ? Math.round(dur) : undefined}
+              aria-valuenow={canSeek ? Math.round(position) : undefined}
+              tabIndex={canSeek ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (!canSeek) return;
+                if (e.key === "ArrowRight") onSeek(Math.min(dur, position + 5));
+                if (e.key === "ArrowLeft") onSeek(Math.max(0, position - 5));
+              }}
             >
-              <SkipForward className="size-4" />
-            </button>
-          )}
+              <div className="sw-seek-track">
+                {preparing && <div className="sw-seek-buffer" style={{ width: `${cachePct}%` }} />}
+                <div className="sw-seek-fill" style={{ width: `${preparing ? 0 : playPct}%` }} />
+              </div>
+              {canSeek && <div className="sw-seek-thumb" style={{ left: `${playPct}%` }} />}
+            </div>
+            <span className="w-9 shrink-0 font-mono text-[11px] tabular-nums text-muted">
+              {fmt(dur)}
+            </span>
+          </div>
+        </div>
 
-          {isHost && (
-            <button
-              onClick={onSkip}
-              disabled={!current}
-              className="grid size-9 place-items-center rounded-full border border-white/12 text-ink/80 transition-colors hover:bg-white/10 disabled:opacity-40"
-              aria-label="Next"
-            >
-              <SkipForward className="size-4" />
-            </button>
-          )}
-
-          <IconToggle
-            active={repeat !== "off"}
-            disabled={!isHost}
-            onClick={onRepeat}
-            label={`Repeat: ${repeat}`}
-          >
-            {repeat === "one" ? <Repeat1 className="size-4" /> : <Repeat className="size-4" />}
-          </IconToggle>
-
-          {/* reactions */}
+        {/* ── right: volume + reactions ── */}
+        <div className="flex items-center justify-end gap-1">
+          <Volume volume={volume} onVolume={onVolume} />
           <div className="relative">
             <button
               onClick={() => setReactOpen((v) => !v)}
-              className="grid size-9 place-items-center rounded-full border border-white/12 text-ink/70 transition-colors hover:bg-white/10 hover:text-ink"
-              aria-label="React"
+              className="grid size-9 place-items-center rounded-full text-ink/65 transition-colors hover:bg-white/10 hover:text-ink"
+              aria-label="Send a reaction"
+              title="Send a reaction"
             >
               <Smile className="size-4" />
             </button>
             {reactOpen && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setReactOpen(false)} />
-                <div className="absolute bottom-11 right-0 z-50 flex gap-1 rounded-full border border-white/10 bg-[var(--popover)] p-1.5 shadow-xl sw-fade-in">
+                <div className="sw-fade-in absolute bottom-12 right-0 z-50 flex gap-1 rounded-full border border-white/10 bg-[var(--popover)] p-1.5 shadow-xl">
                   {REACTIONS.map((e: string) => (
                     <button
                       key={e}
                       onClick={() => react(e)}
                       className="grid size-9 place-items-center rounded-full text-lg transition-transform hover:scale-125 active:scale-95"
+                      aria-label={`React ${e}`}
                     >
                       {e}
                     </button>
@@ -227,6 +269,51 @@ export default function BottomPlayer({
         </div>
       </div>
     </footer>
+  );
+}
+
+/**
+ * Local volume. Deliberately not synced to the room: playback position is shared
+ * so everyone hears the same moment, but how loud it is belongs to the listener.
+ * Muting remembers the previous level so unmuting restores it.
+ */
+function Volume({ volume, onVolume }: { volume: number; onVolume: (v: number) => void }) {
+  const [last, setLast] = useState(volume || 1);
+  const muted = volume === 0;
+
+  const toggle = () => {
+    if (muted) {
+      onVolume(last || 1);
+    } else {
+      setLast(volume);
+      onVolume(0);
+    }
+  };
+
+  const Icon = muted ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
+
+  return (
+    <div className="hidden items-center gap-1.5 sm:flex">
+      <button
+        onClick={toggle}
+        className="grid size-9 place-items-center rounded-full text-ink/65 transition-colors hover:bg-white/10 hover:text-ink"
+        aria-label={muted ? "Unmute" : "Mute"}
+        title={muted ? "Unmute" : "Mute"}
+      >
+        <Icon className="size-4" />
+      </button>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.01}
+        value={volume}
+        onChange={(e) => onVolume(Number(e.target.value))}
+        className="sw-range w-20"
+        aria-label="Volume"
+        title={`Volume ${Math.round(volume * 100)}%`}
+      />
+    </div>
   );
 }
 
@@ -251,16 +338,13 @@ function IconToggle({
       aria-label={label}
       title={label}
       aria-pressed={active}
-      className={`relative grid size-9 place-items-center rounded-full transition-colors disabled:opacity-30 ${
-        active
-          ? "text-[var(--accent-2)] hover:bg-white/10"
-          : "text-ink/60 hover:bg-white/10 hover:text-ink"
-      }`}
+      className={cn(
+        "relative grid size-9 place-items-center rounded-full transition-colors disabled:opacity-25",
+        active ? "text-[var(--accent-2)] hover:bg-white/10" : "text-ink/60 hover:bg-white/10 hover:text-ink"
+      )}
     >
       {children}
-      {active && (
-        <span className="absolute -bottom-0.5 size-1 rounded-full bg-[var(--accent-2)]" />
-      )}
+      {active && <span className="absolute bottom-0.5 size-1 rounded-full bg-[var(--accent-2)]" />}
     </button>
   );
 }

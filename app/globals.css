@@ -121,10 +121,10 @@ video {
   z-index: -3;
   pointer-events: none;
   background:
-    radial-gradient(40% 50% at 15% 8%, rgba(139, 92, 255, 0.55), transparent 62%),
-    radial-gradient(38% 48% at 88% 12%, rgba(34, 211, 238, 0.45), transparent 62%),
-    radial-gradient(50% 55% at 72% 92%, rgba(255, 77, 141, 0.4), transparent 62%);
-  filter: blur(20px) saturate(1.3);
+    radial-gradient(45% 55% at 12% 6%, rgba(139, 92, 255, 0.42), transparent 66%),
+    radial-gradient(42% 52% at 90% 10%, rgba(34, 211, 238, 0.3), transparent 66%),
+    radial-gradient(55% 60% at 74% 94%, rgba(255, 77, 141, 0.26), transparent 66%);
+  filter: blur(30px) saturate(1.25);
   animation: sw-aurora 22s ease-in-out infinite alternate;
 }
 @keyframes sw-aurora {
@@ -143,9 +143,10 @@ video {
 
 /* --- Glass surfaces ------------------------------------------------------ */
 .sw-glass {
-  background: linear-gradient(180deg, rgba(18, 18, 28, 0.62), rgba(12, 12, 20, 0.58));
-  backdrop-filter: blur(20px) saturate(1.3);
-  -webkit-backdrop-filter: blur(20px) saturate(1.3);
+  /* Opaque enough to stay readable over a bright ambient backdrop. */
+  background: linear-gradient(180deg, rgba(20, 20, 31, 0.78), rgba(13, 13, 21, 0.74));
+  backdrop-filter: blur(24px) saturate(1.25);
+  -webkit-backdrop-filter: blur(24px) saturate(1.25);
   border: 1px solid rgba(255, 255, 255, 0.09);
   border-radius: var(--radius-lg);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 20px 50px -24px rgba(0, 0, 0, 0.9);
@@ -172,27 +173,72 @@ video {
   background: linear-gradient(90deg, var(--accent), var(--accent-2));
 }
 
-/* --- Ambient per-track backdrop (room) ---------------------------------- */
+/* --- Ambient per-track backdrop (room) ----------------------------------
+   The current album art, blurred into the background. This has to stay *very*
+   restrained: at full strength a saturated cover (a rainbow, a red sleeve)
+   floods the whole app and destroys text contrast. So it is a low-opacity tint
+   sitting under two scrims, not a wallpaper. */
 .sw-ambient {
   position: fixed;
   inset: 0;
   z-index: -1;
   background-size: cover;
   background-position: center;
-  filter: blur(70px) saturate(2.2) brightness(1);
+  filter: blur(90px) saturate(1.35);
   opacity: 0;
-  transform: scale(1.25);
-  transition: opacity 1.2s ease;
+  transform: scale(1.3);
+  transition: opacity 1.4s ease;
 }
 .sw-ambient.on {
-  opacity: 0.7;
+  opacity: 0.3;
 }
-/* Darken toward the edges so foreground text stays readable over the art. */
+/* Two-layer scrim: a vignette to pull the edges down, plus a flat floor so even
+   the brightest cover can't lift the midtones enough to hurt readability. */
 .sw-ambient::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(70% 70% at 50% 35%, transparent, rgba(8, 8, 14, 0.75));
+  background:
+    radial-gradient(75% 65% at 50% 30%, rgba(8, 8, 14, 0.45), rgba(8, 8, 14, 0.88) 100%),
+    linear-gradient(180deg, rgba(8, 8, 14, 0.55) 0%, rgba(8, 8, 14, 0.35) 40%, rgba(8, 8, 14, 0.8) 100%);
+}
+
+/* Album art with a glow sampled from its own colours — the focal point of the
+   now-playing panel. */
+.sw-art {
+  position: relative;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.14) inset,
+    0 30px 60px -24px rgba(0, 0, 0, 0.9);
+}
+/* Goes on a WRAPPER around .sw-art, never on it: .sw-art clips its overflow, so
+   a blurred pseudo-element inside would be cut off exactly where it should bleed. */
+.sw-art-glow {
+  position: relative;
+  isolation: isolate;
+}
+/* Negative inset so the halo actually bleeds past the artwork's edges — at a
+   positive inset the cover sits on top of it and nothing shows. */
+.sw-art-glow::before {
+  content: "";
+  position: absolute;
+  inset: -7%;
+  z-index: -1;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-3) 55%, var(--accent-2));
+  filter: blur(40px);
+  opacity: 0.45;
+  transition: opacity 700ms ease;
+}
+/* Breathes gently while audio is actually playing. */
+.sw-art-playing {
+  animation: sw-art-breathe 6s ease-in-out infinite alternate;
+}
+@keyframes sw-art-breathe {
+  from { transform: scale(1); }
+  to { transform: scale(1.018); }
 }
 
 /* --- Animated equalizer -------------------------------------------------- */
@@ -211,6 +257,7 @@ video {
 .sw-eq > span:nth-child(2) { animation-delay: 150ms; }
 .sw-eq > span:nth-child(3) { animation-delay: 300ms; }
 .sw-eq > span:nth-child(4) { animation-delay: 450ms; }
+.sw-eq > span:nth-child(5) { animation-delay: 600ms; }
 .sw-eq.paused > span { animation-play-state: paused; height: 4px; }
 @keyframes sw-eq {
   0%, 100% { height: 3px; }
@@ -251,3 +298,129 @@ video {
 .sw-modal-pop, .sw-alert-content { animation: sw-modal-pop 160ms ease-out; }
 @keyframes sw-drawer-in { from { transform: translateX(100%); } to { transform: translateX(0); } }
 .sw-drawer-content { animation: sw-drawer-in 200ms ease-out; }
+
+/* --- Section label (small caps eyebrow used on every panel header) -------- */
+.sw-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* --- Seek / scrub bar ----------------------------------------------------
+   A generous invisible hit area around a thin visual track, so the bar reads as
+   1.5x2px but is comfortably clickable — especially with a thumb on mobile. */
+.sw-seek {
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 8px 0;
+  cursor: pointer;
+  touch-action: none;
+}
+.sw-seek-track {
+  position: relative;
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  overflow: hidden;
+  transition: height 120ms ease;
+}
+.sw-seek:hover .sw-seek-track { height: 7px; }
+.sw-seek-fill {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+.sw-seek-thumb {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  margin-left: -6.5px;
+  border-radius: 50%;
+  background: #fff;
+  transform: translateY(-50%) scale(0);
+  box-shadow: 0 0 12px -1px var(--accent);
+  transition: transform 130ms ease;
+}
+.sw-seek:hover .sw-seek-thumb,
+.sw-seek:focus-visible .sw-seek-thumb { transform: translateY(-50%) scale(1); }
+/* Buffer/cache fill while a track is still downloading. */
+.sw-seek-buffer {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* --- Range input (volume) ------------------------------------------------
+   Native range styling differs wildly per engine, so the track and thumb are
+   both drawn from scratch to match the seek bar. */
+.sw-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 16px;
+  background: transparent;
+  cursor: pointer;
+}
+.sw-range::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.sw-range::-moz-range-track {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+}
+.sw-range::-moz-range-progress {
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.55);
+}
+.sw-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 11px;
+  height: 11px;
+  margin-top: -3.5px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 120ms ease;
+}
+.sw-range::-moz-range-thumb {
+  width: 11px;
+  height: 11px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+}
+.sw-range:hover::-webkit-slider-thumb { transform: scale(1.2); }
+.sw-range:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 999px; }
+
+/* --- Respect reduced-motion ---------------------------------------------
+   The aurora, spinning disc, and equalizer are all decorative; users who ask
+   for less motion should get a still, calm interface rather than no interface. */
+@media (prefers-reduced-motion: reduce) {
+  .sw-aurora,
+  .sw-spin,
+  .sw-eq > span,
+  .sw-float {
+    animation: none !important;
+  }
+  .sw-eq > span { height: 8px; }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
