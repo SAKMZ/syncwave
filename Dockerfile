@@ -29,10 +29,13 @@ WORKDIR /app
 # binary; the build step needs devDependencies, so install everything.
 # Skip youtube-dl-exec's build-time check for a `python` binary (Debian provides
 # `python3`, not `python`); python3 is installed above for actual runtime use.
-# --omit=optional skips ffmpeg-static: that exists so desktop users don't have to
-# install ffmpeg by hand, but this image already has it from apt above.
+# Do NOT use --omit=optional here: npm ships native platform binaries as optional
+# deps, so omitting them breaks lightningcss (and therefore Tailwind) on Linux.
+# ffmpeg-static is dropped individually instead — this image gets ffmpeg from apt
+# above, and lib/ffmpeg.mjs falls back to the system binary when it is absent.
 COPY package.json package-lock.json* ./
-RUN YOUTUBE_DL_SKIP_PYTHON_CHECK=1 npm install --omit=optional
+RUN YOUTUBE_DL_SKIP_PYTHON_CHECK=1 npm install \
+  && rm -rf node_modules/ffmpeg-static
 
 # App source + production build (Next fetches the Sora font at build time).
 COPY . .
