@@ -16,6 +16,8 @@ Runs on any computer you already own.
 ![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker-2496ed.svg?logo=docker&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8.svg)
 
+![Syncwave demo — creating a room, searching, queueing a track, and playing it in sync](docs/demo.gif)
+
 </div>
 
 ---
