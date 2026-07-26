@@ -6,7 +6,8 @@
 // and opens a browser.
 
 import { spawn, spawnSync } from "child_process";
-import { existsSync, statSync, readdirSync } from "fs";
+import { existsSync, statSync, readdirSync, rmSync } from "fs";
+import net from "net";
 import path from "path";
 import os from "os";
 import { fileURLToPath } from "url";
@@ -62,6 +63,33 @@ if (major < 20) {
 
 say(`${C.bold}${C.cyan}🌊 Syncwave${C.reset} ${C.dim}· starting up${C.reset}`);
 
+// ------------------------------------------------------------------ port check
+// Building while another copy is running is how .next gets corrupted: the build
+// rewrites files the live server still has open, and you end up with a server
+// that serves HTML referencing a stylesheet it then refuses. Check before
+// touching anything.
+function portInUse(port) {
+  return new Promise((resolve) => {
+    // No host argument, so this binds the same wildcard address server.mjs does.
+    // Probing 127.0.0.1 instead can succeed while the real bind fails, because
+    // the running server holds the dual-stack :: address.
+    const probe = net
+      .createServer()
+      .once("error", (e) => resolve(e.code === "EADDRINUSE"))
+      .once("listening", () => probe.close(() => resolve(false)))
+      .listen(port);
+  });
+}
+
+if (await portInUse(Number(PORT))) {
+  die(
+    `Something is already using port ${PORT} — most likely another Syncwave.\n\n` +
+      `  Close that window (or whatever is on the port) and try again.\n` +
+      `  To run a second copy alongside it, pick another port:\n\n` +
+      `      ${isWin ? `set PORT=3001 && start.bat` : `PORT=3001 ./start.sh`}\n`
+  );
+}
+
 // ------------------------------------------------------------------- freshness
 /** Newest mtime across the files a build depends on. */
 function newestSourceMtime() {
@@ -113,7 +141,14 @@ if (needsInstall) {
 
 // ----------------------------------------------------------------------- build
 if (needsBuild) {
-  step(built ? "Sources changed — rebuilding" : "Building the app (first run)");
+  // --rebuild throws the previous output away rather than building over it.
+  // Next's incremental cache happily preserves a broken artifact, so "force a
+  // rebuild" has to mean a clean one or it can't fix anything.
+  if (force && existsSync(path.join(ROOT, ".next"))) {
+    step("Clearing the previous build");
+    rmSync(path.join(ROOT, ".next"), { recursive: true, force: true });
+  }
+  step(built && !force ? "Sources changed — rebuilding" : "Building the app");
   if (!run(npm, ["run", "build"])) {
     die("Build failed. Scroll up for the reason.");
   }
