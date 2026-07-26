@@ -2,7 +2,8 @@
 #
 # Syncwave launcher for macOS and Linux.
 #
-#   ./start.sh              start it
+#   ./start.sh              start it, and print a public link to share
+#   ./start.sh --local      stay on the local network, no public link
 #   ./start.sh --rebuild    force a rebuild first
 #
 # The real work happens in scripts/launch.mjs — this only has to find Node.

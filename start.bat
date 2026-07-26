@@ -3,6 +3,9 @@ setlocal
 cd /d "%~dp0"
 
 rem Syncwave launcher for Windows. Double-click this file.
+rem   start.bat            start it, and print a public link to share
+rem   start.bat --local    stay on the local network, no public link
+rem   start.bat --rebuild  force a rebuild first
 rem The real work happens in scripts\launch.mjs — this only has to find Node and
 rem keep the window open long enough to read an error.
 

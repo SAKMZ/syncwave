@@ -92,7 +92,9 @@ function newestSourceMtime() {
 }
 
 const force = process.argv.includes("--rebuild");
-const share = process.argv.includes("--share");
+// Public by default: the whole point is listening *together*, and the people you
+// want to listen with are usually not on your Wi-Fi. --local keeps it on the LAN.
+const share = !(process.argv.includes("--local") || process.argv.includes("--no-share"));
 const needsInstall = !existsSync(path.join(ROOT, "node_modules", "next"));
 const built = existsSync(BUILD_ID);
 const needsBuild = force || !built || newestSourceMtime() > statSync(BUILD_ID).mtimeMs;
@@ -162,10 +164,8 @@ if (lan.length) {
 }
 if (!share) {
   say(
-    `\n  ${C.dim}That address only works on your own Wi-Fi.${C.reset}\n` +
-      `  ${C.dim}To invite people anywhere, restart with:${C.reset} ${C.bold}${
-        isWin ? "start.bat --share" : "./start.sh --share"
-      }${C.reset}`
+    `\n  ${C.dim}Local only — these addresses work on your own network.${C.reset}\n` +
+      `  ${C.dim}Drop --local to get a public link you can send to anyone.${C.reset}`
   );
 }
 say(`\n  ${C.dim}Press Ctrl+C to stop.${C.reset}\n`);
@@ -194,17 +194,61 @@ const openTimer = setTimeout(() => {
 
 // ----------------------------------------------------------------- public link
 // A LAN address is useless for a friend across town, which is most of the point
-// of a listening room. --share puts a Cloudflare quick tunnel in front of the
-// server: a real HTTPS URL, no account, no port forwarding, no domain.
+// of a listening room, so this is on unless --local. It fronts the server with a
+// Cloudflare quick tunnel: a real HTTPS URL, no account, no port forwarding.
+async function get(path) {
+  try {
+    const r = await fetch(`http://127.0.0.1:${PORT}${path}`);
+    return r.ok ? await r.json() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolves once the server answers, false if it never does. */
+async function waitForServer(tries = 60) {
+  for (let i = 0; i < tries; i++) {
+    if (await get("/api/health")) return true;
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return false;
+}
+
+/**
+ * An unclaimed instance lets whoever reaches it first set the admin password.
+ * That is fine on a LAN and not fine on a public URL, so the tunnel waits until
+ * setup is done. The browser is already sitting on the page that does it.
+ */
+async function waitUntilClaimed() {
+  const first = await get("/api/admin/session");
+  if (first?.setupComplete) return true;
+
+  say(
+    `  ${C.yellow}Finish first-run setup in your browser before this goes public.${C.reset}\n` +
+      `  ${C.dim}Set an admin password at ${C.reset}${C.cyan}http://localhost:${PORT}/setup${C.reset}\n` +
+      `  ${C.dim}Waiting… (or press Ctrl+C and restart with --local to skip)${C.reset}\n`
+  );
+  for (let i = 0; i < 300; i++) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const s = await get("/api/admin/session");
+    if (s?.setupComplete) return true;
+  }
+  return false;
+}
+
 let tunnel;
 if (share) {
   step("Opening a public link");
   say(
-    `  ${C.yellow}This makes your Syncwave reachable by anyone with the link.${C.reset}\n` +
+    `  ${C.yellow}Anyone with this link will be able to reach your Syncwave.${C.reset}\n` +
       `  ${C.dim}The URL is random and disappears when you stop the server.${C.reset}\n` +
-      `  ${C.dim}Set an admin password at /setup if you have not already.${C.reset}\n`
+      `  ${C.dim}Use --local to stay on your own network instead.${C.reset}\n`
   );
   try {
+    if (!(await waitForServer())) throw new Error("the server did not start");
+    if (!(await waitUntilClaimed())) {
+      throw new Error("setup was not completed, so no public link was opened");
+    }
     const { bin } = await import("cloudflared");
     if (!existsSync(bin)) throw new Error("cloudflared binary not installed");
 

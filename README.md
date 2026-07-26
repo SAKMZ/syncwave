@@ -62,9 +62,10 @@ a study room, a Discord community's permanent hangout.
 - 🖱️ **Runs by double-clicking** — a launcher installs, builds, and starts it, then
   prints the address to share. ffmpeg and a JS runtime are bundled, so Node is the
   only prerequisite. Docker and a one-command Linux installer are there too.
-- 🌍 **One flag to invite anyone** — `--share` opens a public HTTPS link via a
-  Cloudflare quick tunnel: no account, no port forwarding, no domain. Tailscale
-  and your-own-domain setups are documented too.
+- 🌍 **A shareable link out of the box** — the launcher prints a public HTTPS URL
+  via a Cloudflare quick tunnel, so friends anywhere can join. No account, no port
+  forwarding, no domain. `--local` keeps it on your network; Tailscale and
+  your-own-domain setups are documented for permanent addresses.
 
 ## How it works
 
@@ -88,8 +89,7 @@ It all runs in **one process / one container**.
 3. **Windows:** double-click `start.bat` · **macOS/Linux:** `./start.sh`
 
 The first run installs and builds (a few minutes); after that it starts in
-seconds, opens your browser, and prints the address to share with friends on
-your Wi-Fi:
+seconds and opens your browser:
 
 ```
   On this computer   http://localhost:3000
@@ -99,27 +99,26 @@ your Wi-Fi:
 ffmpeg **and** a JavaScript runtime come bundled, so there is nothing else to
 install — YouTube requires the JS runtime and refuses downloads without one.
 
-### Inviting people who aren't on your Wi-Fi
+### Your friends aren't on your Wi-Fi, so you also get a public link
 
-A LAN address is no use to a friend across town, so add `--share`:
-
-```bash
-./start.sh --share          # Windows: start.bat --share
-```
-
-That opens a **Cloudflare quick tunnel** and prints a public HTTPS link:
+On first run it asks you to set an admin password, then prints a shareable
+HTTPS link:
 
 ```
   Share this link    https://reg-points-advised-course.trycloudflare.com
 ```
 
-Anyone can open it — no account, no port forwarding, no domain, nothing to
-configure. Because it's HTTPS, the **Install app** prompt works on phones too.
-The URL is random and disappears when you stop the server.
+Send that to anyone, anywhere. It's a **Cloudflare quick tunnel** — no account,
+no port forwarding, no domain, nothing to configure. Because it's HTTPS, the
+**Install app** prompt works on phones too. The URL is random and disappears
+when you stop the server.
 
-> It makes your instance reachable by anyone with the link, so set an admin
-> password at `/setup` first. For a permanent address, or a private one only
-> your own devices can reach, use **Tailscale** — see [DEPLOY.md](DEPLOY.md).
+> **The link is public**, so the launcher won't open one until you've set an
+> admin password — otherwise the first stranger to find the URL could claim your
+> instance. Prefer to stay on your own network? Use `--local`.
+
+For a **permanent** address, or one only your own devices can reach, use
+**Tailscale** — see [DEPLOY.md](DEPLOY.md).
 
 ### Always-on box — Docker
 

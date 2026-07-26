@@ -130,7 +130,7 @@ pick whichever of these fits.
 
 | | Who can join | Lasts | Setup |
 |---|---|---|---|
-| [**`--share`**](#share--instant-public-link) | Anyone with the link | Until you stop the server | One flag |
+| [**Quick tunnel**](#quick-tunnel--on-by-default) | Anyone with the link | Until you stop the server | None — it's the default |
 | [**Tailscale Serve**](#tailscale-free-no-domain-real-certificate) | Only your own devices | Permanent | Install Tailscale |
 | [**Tailscale Funnel**](#tailscale-free-no-domain-real-certificate) | Anyone with the link | Permanent | Install Tailscale |
 | [**Your own domain**](#your-own-domain-via-caddy) | Anyone | Permanent | DNS + open ports |
@@ -138,23 +138,31 @@ pick whichever of these fits.
 Share links inside the app always use whatever address you opened it on, so all
 of these work without setting `PUBLIC_URL`.
 
-### `--share` — instant public link
+### Quick tunnel — on by default
+
+The desktop launcher opens a **Cloudflare quick tunnel** and prints a public
+HTTPS URL such as `https://reg-points-advised-course.trycloudflare.com`. No
+account, no port forwarding, no domain. Send that link to anyone.
+
+This is the default because a LAN address is no use to the people you actually
+want to listen with. To stay on your own network instead:
 
 ```bash
-./start.sh --share          # Windows: start.bat --share
+./start.sh --local          # Windows: start.bat --local
 ```
 
-Syncwave starts a **Cloudflare quick tunnel** and prints a public HTTPS URL such
-as `https://reg-points-advised-course.trycloudflare.com`. No account, no port
-forwarding, no domain. Send that link to anyone.
+**The tunnel waits until you've set an admin password.** An unclaimed instance
+lets whoever reaches it first become the admin — harmless on a LAN, not harmless
+on a public URL — so on first run the launcher holds the link back until you
+finish `/setup` in the browser it just opened.
 
-The tunnel closes when you stop the server, and the URL is different every time —
-which is a feature for a one-off listening session and a nuisance for a permanent
-room. For something permanent, use one of the options below.
+The tunnel closes when you stop the server and the URL differs every time, which
+suits a one-off session and not a permanent room. For permanence, use an option
+below.
 
-> This exposes your instance to anyone who has the link. Set an admin password at
-> `/setup` before sharing it. `cloudflared` ships with the desktop install; if it
-> is missing, `npm install cloudflared`.
+> `cloudflared` ships with the desktop install. If it's missing, run
+> `npm install cloudflared`. The Docker image doesn't include it — a server
+> deployment should sit behind its own reverse proxy.
 
 ### Tailscale (free, no domain, real certificate)
 
