@@ -177,20 +177,28 @@ const server = spawn(process.execPath, ["server.mjs"], {
   env: { ...process.env, NODE_ENV: "production", PORT },
 });
 
-// Give the server a moment to bind before the browser races it.
-const url = `http://localhost:${PORT}`;
-const openTimer = setTimeout(() => {
+function openBrowser(path) {
+  const target = `http://localhost:${PORT}${path}`;
   try {
     if (isWin) {
-      spawn(`start "" "${url}"`, { stdio: "ignore", detached: true, shell: true }).unref();
+      spawn(`start "" "${target}"`, { stdio: "ignore", detached: true, shell: true }).unref();
     } else {
       const cmd = process.platform === "darwin" ? "open" : "xdg-open";
-      spawn(cmd, [url], { stdio: "ignore", detached: true }).unref();
+      spawn(cmd, [target], { stdio: "ignore", detached: true }).unref();
     }
   } catch {
     /* headless box, or no opener installed — the URLs are printed above */
   }
-}, 2500);
+}
+
+// Land on /setup when the instance has not been claimed yet. Opening the home
+// page instead just shows a working-looking app with no hint that a password is
+// the one thing standing between you and a shareable link.
+const opening = (async () => {
+  if (!(await waitForServer())) return;
+  const s = await get("/api/admin/session");
+  openBrowser(s?.setupComplete ? "/" : "/setup");
+})();
 
 // ----------------------------------------------------------------- public link
 // A LAN address is useless for a friend across town, which is most of the point
@@ -224,9 +232,11 @@ async function waitUntilClaimed() {
   if (first?.setupComplete) return true;
 
   say(
-    `  ${C.yellow}Finish first-run setup in your browser before this goes public.${C.reset}\n` +
-      `  ${C.dim}Set an admin password at ${C.reset}${C.cyan}http://localhost:${PORT}/setup${C.reset}\n` +
-      `  ${C.dim}Waiting… (or press Ctrl+C and restart with --local to skip)${C.reset}\n`
+    `\n  ${C.yellow}${C.bold}⏸  Waiting for you to set an admin password.${C.reset}\n\n` +
+      `     ${C.bold}Open${C.reset} ${C.cyan}http://localhost:${PORT}/setup${C.reset} ${C.dim}(it should already be open)${C.reset}\n` +
+      `     ${C.dim}Until then anyone finding the public URL could claim this server,${C.reset}\n` +
+      `     ${C.dim}so the link appears here the moment you're done.${C.reset}\n\n` +
+      `     ${C.dim}Don't want a public link? Ctrl+C and run with --local.${C.reset}\n`
   );
   for (let i = 0; i < 300; i++) {
     await new Promise((r) => setTimeout(r, 2000));
@@ -292,7 +302,6 @@ if (share) {
 }
 
 const stop = () => {
-  clearTimeout(openTimer);
   try {
     tunnel?.kill();
   } catch {
@@ -303,6 +312,8 @@ const stop = () => {
 process.on("SIGINT", stop);
 process.on("SIGTERM", stop);
 server.on("exit", (code) => {
-  clearTimeout(openTimer);
+  stop();
   process.exit(code ?? 0);
 });
+// Keeps the browser-opening promise from being an unhandled rejection.
+void opening.catch(() => {});
