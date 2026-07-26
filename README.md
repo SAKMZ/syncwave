@@ -59,10 +59,12 @@ a study room, a Discord community's permanent hangout.
 - 📲 **Mobile-first UI** — a compact app shell (fixed top bar + bottom player,
   tabbed Queue / Add / Chat) that fits a phone screen, plus an aurora backdrop,
   album-art ambient glow, and glassmorphism.
-- 🖱️ **Runs by double-clicking** — a launcher script installs, builds, and starts
-  it, then prints the LAN address to share. ffmpeg and a JS runtime are bundled,
-  so Node is the only prerequisite. Docker and a one-command Linux installer are
-  there too.
+- 🖱️ **Runs by double-clicking** — a launcher installs, builds, and starts it, then
+  prints the address to share. ffmpeg and a JS runtime are bundled, so Node is the
+  only prerequisite. Docker and a one-command Linux installer are there too.
+- 🌍 **One flag to invite anyone** — `--share` opens a public HTTPS link via a
+  Cloudflare quick tunnel: no account, no port forwarding, no domain. Tailscale
+  and your-own-domain setups are documented too.
 
 ## How it works
 
@@ -96,6 +98,28 @@ your Wi-Fi:
 
 ffmpeg **and** a JavaScript runtime come bundled, so there is nothing else to
 install — YouTube requires the JS runtime and refuses downloads without one.
+
+### Inviting people who aren't on your Wi-Fi
+
+A LAN address is no use to a friend across town, so add `--share`:
+
+```bash
+./start.sh --share          # Windows: start.bat --share
+```
+
+That opens a **Cloudflare quick tunnel** and prints a public HTTPS link:
+
+```
+  Share this link    https://reg-points-advised-course.trycloudflare.com
+```
+
+Anyone can open it — no account, no port forwarding, no domain, nothing to
+configure. Because it's HTTPS, the **Install app** prompt works on phones too.
+The URL is random and disappears when you stop the server.
+
+> It makes your instance reachable by anyone with the link, so set an admin
+> password at `/setup` first. For a permanent address, or a private one only
+> your own devices can reach, use **Tailscale** — see [DEPLOY.md](DEPLOY.md).
 
 ### Always-on box — Docker
 

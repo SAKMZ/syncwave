@@ -31,12 +31,13 @@ WORKDIR /app
 # `python3`, not `python`); python3 is installed above for actual runtime use.
 # Do NOT use --omit=optional here: npm ships native platform binaries as optional
 # deps, so omitting them breaks lightningcss (and therefore Tailwind) on Linux.
-# ffmpeg-static and deno are dropped individually instead — both exist for
-# desktop installs, and this image already provides them system-wide (apt and the
-# install above). lib/ffmpeg.mjs and lib/jsruntime.mjs prefer the system copies.
+# ffmpeg-static, deno and cloudflared are dropped individually instead: the first
+# two are provided system-wide in this image (apt and the install above), and
+# cloudflared only backs the desktop launcher's --share flag, which a server
+# deployment behind its own reverse proxy has no use for.
 COPY package.json package-lock.json* ./
 RUN YOUTUBE_DL_SKIP_PYTHON_CHECK=1 npm install \
-  && rm -rf node_modules/ffmpeg-static node_modules/deno
+  && rm -rf node_modules/ffmpeg-static node_modules/deno node_modules/cloudflared
 
 # App source + production build (Next fetches the Sora font at build time).
 COPY . .

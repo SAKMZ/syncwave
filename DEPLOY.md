@@ -124,11 +124,39 @@ Lost it? Delete `data/admin.json` and reload; setup runs again.
 
 ## Listening from outside your home
 
-Rooms work on your LAN with zero setup. To let friends join from elsewhere —
-and to get the **Install app** (PWA) prompt, which browsers only offer over
-HTTPS — pick one:
+Rooms work on your LAN with zero setup. To let friends join from elsewhere — and
+to get the **Install app** (PWA) prompt, which browsers only offer over HTTPS —
+pick whichever of these fits.
 
-### Tailscale (recommended — free, no domain, real certificate)
+| | Who can join | Lasts | Setup |
+|---|---|---|---|
+| [**`--share`**](#share--instant-public-link) | Anyone with the link | Until you stop the server | One flag |
+| [**Tailscale Serve**](#tailscale-free-no-domain-real-certificate) | Only your own devices | Permanent | Install Tailscale |
+| [**Tailscale Funnel**](#tailscale-free-no-domain-real-certificate) | Anyone with the link | Permanent | Install Tailscale |
+| [**Your own domain**](#your-own-domain-via-caddy) | Anyone | Permanent | DNS + open ports |
+
+Share links inside the app always use whatever address you opened it on, so all
+of these work without setting `PUBLIC_URL`.
+
+### `--share` — instant public link
+
+```bash
+./start.sh --share          # Windows: start.bat --share
+```
+
+Syncwave starts a **Cloudflare quick tunnel** and prints a public HTTPS URL such
+as `https://reg-points-advised-course.trycloudflare.com`. No account, no port
+forwarding, no domain. Send that link to anyone.
+
+The tunnel closes when you stop the server, and the URL is different every time —
+which is a feature for a one-off listening session and a nuisance for a permanent
+room. For something permanent, use one of the options below.
+
+> This exposes your instance to anyone who has the link. Set an admin password at
+> `/setup` before sharing it. `cloudflared` ships with the desktop install; if it
+> is missing, `npm install cloudflared`.
+
+### Tailscale (free, no domain, real certificate)
 
 ```bash
 curl -fsSL https://tailscale.com/install.sh | sh
@@ -138,8 +166,13 @@ sudo tailscale funnel --bg 3000    # public: anyone with the link
 tailscale serve status             # prints your https://<machine>.<tailnet>.ts.net URL
 ```
 
-Set `PUBLIC_URL` to that `https://…ts.net` address and restart. No ports
-forwarded, no certificate to manage.
+**Serve** keeps it inside your tailnet — friends need Tailscale installed and an
+invite to it, which is ideal for a household or a small group of regulars.
+**Funnel** puts it on the public internet at the same address, so anyone with the
+link can join. Either way you get a permanent name and a real certificate, with
+no ports forwarded and no certificate to manage.
+
+Optionally set `PUBLIC_URL` to that `https://…ts.net` address and restart.
 
 > If you also run a DNS filter such as AdGuard Home or Pi-hole, add
 > `[/<your-tailnet>.ts.net/]8.8.8.8` as an upstream, or its MagicDNS entry will

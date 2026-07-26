@@ -92,6 +92,7 @@ function newestSourceMtime() {
 }
 
 const force = process.argv.includes("--rebuild");
+const share = process.argv.includes("--share");
 const needsInstall = !existsSync(path.join(ROOT, "node_modules", "next"));
 const built = existsSync(BUILD_ID);
 const needsBuild = force || !built || newestSourceMtime() > statSync(BUILD_ID).mtimeMs;
@@ -156,12 +157,16 @@ say(`\n  ${C.bold}On this computer${C.reset}   ${C.cyan}http://localhost:${PORT}
 if (lan.length) {
   say(`  ${C.bold}On your network${C.reset}    ${C.cyan}http://${lan[0]}:${PORT}${C.reset}`);
   for (const a of lan.slice(1)) say(`                     ${C.dim}http://${a}:${PORT}${C.reset}`);
-  say(
-    `\n  ${C.dim}Share the network address with friends on the same Wi-Fi.${C.reset}\n` +
-      `  ${C.dim}To reach it from anywhere, see DEPLOY.md (Tailscale).${C.reset}`
-  );
 } else {
   say(`  ${C.dim}No network address found — only this computer can reach it.${C.reset}`);
+}
+if (!share) {
+  say(
+    `\n  ${C.dim}That address only works on your own Wi-Fi.${C.reset}\n` +
+      `  ${C.dim}To invite people anywhere, restart with:${C.reset} ${C.bold}${
+        isWin ? "start.bat --share" : "./start.sh --share"
+      }${C.reset}`
+  );
 }
 say(`\n  ${C.dim}Press Ctrl+C to stop.${C.reset}\n`);
 
@@ -187,8 +192,68 @@ const openTimer = setTimeout(() => {
   }
 }, 2500);
 
+// ----------------------------------------------------------------- public link
+// A LAN address is useless for a friend across town, which is most of the point
+// of a listening room. --share puts a Cloudflare quick tunnel in front of the
+// server: a real HTTPS URL, no account, no port forwarding, no domain.
+let tunnel;
+if (share) {
+  step("Opening a public link");
+  say(
+    `  ${C.yellow}This makes your Syncwave reachable by anyone with the link.${C.reset}\n` +
+      `  ${C.dim}The URL is random and disappears when you stop the server.${C.reset}\n` +
+      `  ${C.dim}Set an admin password at /setup if you have not already.${C.reset}\n`
+  );
+  try {
+    const { bin } = await import("cloudflared");
+    if (!existsSync(bin)) throw new Error("cloudflared binary not installed");
+
+    // Spawn the binary directly rather than using the package's tunnel() helper,
+    // which builds `tunnel run` and needs a named, pre-created tunnel. A quick
+    // tunnel is plain `tunnel --url`, and it prints its URL on stderr.
+    tunnel = spawn(bin, ["tunnel", "--url", `http://localhost:${PORT}`], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+
+    const publicUrl = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error("timed out waiting for a URL")), 45000);
+      const scan = (buf) => {
+        const m = String(buf).match(/https:\/\/[-\w.]+\.trycloudflare\.com/);
+        if (m) {
+          clearTimeout(timer);
+          resolve(m[0]);
+        }
+      };
+      tunnel.stdout?.on("data", scan);
+      tunnel.stderr?.on("data", scan);
+      tunnel.once("exit", (code) => {
+        clearTimeout(timer);
+        reject(new Error(`cloudflared exited (${code})`));
+      });
+    });
+
+    say(`  ${C.bold}${C.green}Share this link${C.reset}    ${C.cyan}${publicUrl}${C.reset}\n`);
+    say(`  ${C.dim}It is HTTPS, so "Install app" works on phones too.${C.reset}\n`);
+  } catch (e) {
+    try {
+      tunnel?.kill();
+    } catch {
+      /* nothing to kill */
+    }
+    tunnel = undefined;
+    warn(`Could not open a public link: ${e?.message ?? e}`);
+    warn("Syncwave is still running on the addresses above.");
+    warn("Alternatives (Tailscale, your own domain) are in DEPLOY.md.");
+  }
+}
+
 const stop = () => {
   clearTimeout(openTimer);
+  try {
+    tunnel?.kill();
+  } catch {
+    /* already gone */
+  }
   server.kill();
 };
 process.on("SIGINT", stop);
