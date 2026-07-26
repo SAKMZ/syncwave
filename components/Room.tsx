@@ -32,6 +32,8 @@ type Track = {
   artist: string;
   duration: number;
   thumbnail?: string;
+  /** Larger cover for the now-playing panel. Absent on pre-existing rooms. */
+  art?: string;
   addedBy?: string;
   status?: Status;
 };

@@ -9,6 +9,8 @@ type Track = {
   artist: string;
   duration: number;
   thumbnail?: string;
+  /** Larger cover for this panel; falls back to the list-sized thumbnail. */
+  art?: string;
   addedBy?: string;
 } | null;
 
@@ -65,12 +67,20 @@ export default function NowPlaying({
         )}
       >
         <div className="sw-art size-full">
-          {current?.thumbnail ? (
+          {current?.art || current?.thumbnail ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={current.thumbnail}
+              src={current.art || current.thumbnail}
               alt={`${current.title} cover art`}
               className="size-full object-cover"
+              // Old rooms persisted before this field existed only have the
+              // small thumbnail; don't leave them with a broken image.
+              onError={(e) => {
+                const img = e.currentTarget;
+                if (current.thumbnail && img.src !== current.thumbnail) {
+                  img.src = current.thumbnail;
+                }
+              }}
             />
           ) : (
             <div className="grid size-full place-items-center bg-white/[0.04]">
