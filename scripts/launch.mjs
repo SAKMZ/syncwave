@@ -118,8 +118,10 @@ if (needsBuild) {
   say(`${C.dim}  build is up to date${C.reset}`);
 }
 
-// ---------------------------------------------------------------------- ffmpeg
+// ------------------------------------------------------------- runtime checks
 const { ffmpegMissing } = await import("../lib/ffmpeg.mjs");
+const { jsRuntimeMissing } = await import("../lib/jsruntime.mjs");
+
 if (ffmpegMissing()) {
   warn("ffmpeg was not found, so tracks will fail to convert.");
   warn(
@@ -129,6 +131,12 @@ if (ffmpegMissing()) {
         ? "Install it with:  brew install ffmpeg"
         : "Install it with:  sudo apt install ffmpeg"
   );
+}
+if (jsRuntimeMissing()) {
+  // Without this YouTube bot-checks every request and the failure looks like a
+  // blocked IP rather than a missing dependency.
+  warn("No JavaScript runtime found — YouTube will refuse downloads.");
+  warn("Fix it with:  npm install deno");
 }
 
 // -------------------------------------------------------------------- lan urls

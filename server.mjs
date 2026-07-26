@@ -8,6 +8,7 @@ import { Server as IOServer } from "socket.io";
 import { registerRoomHandlers } from "./lib/rooms.mjs";
 import { handleAudioRequest, sweepCache } from "./lib/resolver.mjs";
 import { ffmpegMissing } from "./lib/ffmpeg.mjs";
+import { jsRuntimeMissing } from "./lib/jsruntime.mjs";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "3000", 10);
@@ -44,6 +45,12 @@ server.listen(port, () => {
     console.warn(
       "! ffmpeg was not found. Tracks will fail to convert.\n" +
         "  Install it and restart, or run `npm install` to fetch the bundled copy."
+    );
+  }
+  if (jsRuntimeMissing()) {
+    console.warn(
+      "! No JavaScript runtime (deno) found. YouTube will bot-check this server\n" +
+        "  and tracks will fail. Run `npm install` to fetch the bundled copy."
     );
   }
 });

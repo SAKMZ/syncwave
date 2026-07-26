@@ -58,8 +58,9 @@ a study room, a Discord community's permanent hangout.
   tabbed Queue / Add / Chat) that fits a phone screen, plus an aurora backdrop,
   album-art ambient glow, and glassmorphism.
 - 🖱️ **Runs by double-clicking** — a launcher script installs, builds, and starts
-  it, then prints the LAN address to share. ffmpeg is bundled. Docker and a
-  one-command Linux installer are there too.
+  it, then prints the LAN address to share. ffmpeg and a JS runtime are bundled,
+  so Node is the only prerequisite. Docker and a one-command Linux installer are
+  there too.
 
 ## How it works
 
@@ -91,7 +92,8 @@ your Wi-Fi:
   On your network    http://192.168.1.42:3000
 ```
 
-ffmpeg comes bundled, so there's nothing else to install.
+ffmpeg **and** a JavaScript runtime come bundled, so there is nothing else to
+install — YouTube requires the JS runtime and refuses downloads without one.
 
 ### Always-on box — Docker
 
