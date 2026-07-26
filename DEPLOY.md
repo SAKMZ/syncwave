@@ -171,8 +171,14 @@ room names which.
 
 **1. ffmpeg is missing.** See the note in Option A.
 
-**2. YouTube is bot-checking you.** Most likely on a VPS or a shared/CGNAT
-connection. Upload a `cookies.txt`:
+**2. You're being rate-limited (HTTP 429).** This happens on *any* connection,
+including a home one, if you queue a lot of tracks quickly — YouTube starts
+refusing requests and yt-dlp reports it as a bot-check. It is **temporary**:
+wait a few minutes and it clears on its own. Syncwave tells you when this is the
+cause rather than blaming your IP.
+
+**3. YouTube is bot-checking you persistently.** Most likely on a VPS or a
+shared/CGNAT connection. Upload a `cookies.txt`:
 
 1. Install a "Get cookies.txt LOCALLY" extension for Chrome or Firefox.
 2. Open `youtube.com` **while signed in** and export in **Netscape** format.
@@ -186,7 +192,7 @@ the very next track — no restart.
 > it rate-limited or banned. Never put your main account on an instance other
 > people can reach.
 
-**3. Your IP range is blocked outright.** Cookies won't help — see the note at
+**4. Your IP range is blocked outright.** Cookies won't help — see the note at
 the top. Use a residential connection, or a proxy:
 
 <a id="ytdlp_proxy"></a>
