@@ -29,8 +29,10 @@ WORKDIR /app
 # binary; the build step needs devDependencies, so install everything.
 # Skip youtube-dl-exec's build-time check for a `python` binary (Debian provides
 # `python3`, not `python`); python3 is installed above for actual runtime use.
+# --omit=optional skips ffmpeg-static: that exists so desktop users don't have to
+# install ffmpeg by hand, but this image already has it from apt above.
 COPY package.json package-lock.json* ./
-RUN YOUTUBE_DL_SKIP_PYTHON_CHECK=1 npm install
+RUN YOUTUBE_DL_SKIP_PYTHON_CHECK=1 npm install --omit=optional
 
 # App source + production build (Next fetches the Sora font at build time).
 COPY . .

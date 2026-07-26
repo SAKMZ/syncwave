@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 #
-# Syncwave one-command installer for a fresh Ubuntu/Debian VPS.
+# Syncwave one-command installer for an Ubuntu/Debian machine — a home server,
+# an old laptop, a NAS, a Raspberry Pi.
 #
 #   curl -fsSL https://raw.githubusercontent.com/SAKMZ/syncwave/main/scripts/install.sh | sudo bash
+#
+# For a desktop you sit in front of, prefer ./start.sh — no Docker needed.
 #
 # With a domain (gets automatic HTTPS via Caddy, which enables the installable
 # PWA and is what you want for anything shared with friends):
@@ -144,8 +147,10 @@ EOF
 if [ -z "$DOMAIN" ]; then
   cat <<'EOF'
   Note: without a domain you are on plain HTTP, so browsers will not offer
-  "Install app" (PWA install requires HTTPS). Point a domain at this server and
-  re-run this script with DOMAIN=your.domain to get a free certificate.
+  "Install app" (PWA install requires HTTPS). Two ways to fix that:
+
+    - Tailscale, free and no domain needed:  see DEPLOY.md
+    - Point a domain here and re-run with DOMAIN=your.domain
 
 EOF
 fi

@@ -2,21 +2,19 @@
 
 # 🌊 Syncwave
 
-**Self-hosted, AI-powered listening rooms — your own Spotify Jam.**
+**Your own Spotify Jam — self-hosted, no accounts, no subscription.**
 
 Start a room, share one link, and listen with your friends **perfectly in sync** —
 shared queue, live chat, floating reactions, vote-to-skip, and an optional AI DJ.
-Runs anywhere Docker does.
+Runs on any computer you already own.
+
+*No accounts. No Premium requirement. Nobody's servers but yours.*
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-8b5cff.svg)
 ![Next.js 15](https://img.shields.io/badge/Next.js-15-000000.svg?logo=next.js)
 ![Node 20+](https://img.shields.io/badge/Node-20%2B-3c873a.svg?logo=node.js&logoColor=white)
 ![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker-2496ed.svg?logo=docker&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8.svg)
-
-[![Deploy on Railway](https://img.shields.io/badge/Deploy%20on-Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)](DEPLOY.md#option-a--railway-one-click)
-[![Deploy to Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
-[![Deploy to Hostinger](https://img.shields.io/badge/Deploy%20to-Hostinger-673DE6?style=for-the-badge&logo=hostinger&logoColor=white)](HOSTINGER.md)
 
 </div>
 
@@ -59,8 +57,9 @@ a study room, a Discord community's permanent hangout.
 - 📲 **Mobile-first UI** — a compact app shell (fixed top bar + bottom player,
   tabbed Queue / Add / Chat) that fits a phone screen, plus an aurora backdrop,
   album-art ambient glow, and glassmorphism.
-- 🐳 **One-container deploy** — Next.js + realtime server + audio resolver in a
-  single Docker image.
+- 🖱️ **Runs by double-clicking** — a launcher script installs, builds, and starts
+  it, then prints the LAN address to share. ffmpeg is bundled. Docker and a
+  one-command Linux installer are there too.
 
 ## How it works
 
@@ -75,112 +74,84 @@ a study room, a Discord community's permanent hangout.
 
 It all runs in **one process / one container**.
 
-## Quick start (local)
+## Get it running
 
-```bash
-cp .env.example .env       # optional: tweak PUBLIC_URL etc.
-npm install
-npm run dev                # http://localhost:3000
+### Easiest — double-click a file
+
+1. Install [Node.js LTS](https://nodejs.org).
+2. Download this repo (**Code → Download ZIP**) and unzip it.
+3. **Windows:** double-click `start.bat` · **macOS/Linux:** `./start.sh`
+
+The first run installs and builds (a few minutes); after that it starts in
+seconds, opens your browser, and prints the address to share with friends on
+your Wi-Fi:
+
+```
+  On this computer   http://localhost:3000
+  On your network    http://192.168.1.42:3000
 ```
 
-Requires **Node 20+** and **ffmpeg** on your PATH (yt-dlp uses it to extract audio).
+ffmpeg comes bundled, so there's nothing else to install.
 
-## Deploy
+### Always-on box — Docker
 
-Syncwave is **stateful** — a long-lived WebSocket server, live yt-dlp processes,
-and a disk cache — so it needs an always-on host with a persistent disk. It does
-**not** run on Vercel, Netlify, or any serverless platform. Two easy paths:
+```bash
+cp .env.example .env
+docker compose up -d --build
+```
 
-### 🚂 Fastest start — Railway (free $5 trial)
+Data persists in `./data` (rooms + settings) and `./cache` (audio).
 
-[![Deploy on Railway](https://img.shields.io/badge/Deploy%20on-Railway-0B0D0E?style=for-the-badge&logo=railway&logoColor=white)](https://railway.com/new)
-
-The only path that gets you a live HTTPS instance **without entering a card**.
-Click → **GitHub Repository** → `SAKMZ/syncwave`. Railway reads
-[`railway.json`](railway.json) and picks up the volume and env vars from
-[`render.yaml`](render.yaml) automatically.
-**[Full steps + what to check afterwards →](DEPLOY.md#option-a--railway-one-click)**
-
-### 🚀 One click — Render
-
-[![Deploy to Render](https://img.shields.io/badge/Deploy%20to-Render-46E3B7?style=for-the-badge&logo=render&logoColor=black)](https://render.com/deploy?repo=https://github.com/SAKMZ/syncwave)
-
-Render reads [`render.yaml`](render.yaml) and provisions the container, a
-persistent disk, and HTTPS for you. You get a `https://…onrender.com` link where
-**Install app** works right away. Needs a paid instance (~$7/mo) — free instances
-have no disk and sleep when idle, which would drop everyone in the room.
-
-### 🖥️ One command — your own VPS
-
-[![Deploy to Hostinger](https://img.shields.io/badge/Deploy%20to-Hostinger-673DE6?style=for-the-badge&logo=hostinger&logoColor=white)](HOSTINGER.md)
-
-More control, a much bigger audio cache, and cheaper as you grow. On any fresh
-Ubuntu box:
+### Dedicated Linux server — one command
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/SAKMZ/syncwave/main/scripts/install.sh | sudo bash
 ```
 
-Add `DOMAIN=music.example.com EMAIL=you@example.com` to also get automatic HTTPS
-via Caddy. The installer handles Docker, the build, the reverse proxy, and the
-certificate — and re-running it updates in place.
+**Everything else** — listening from outside your home over HTTPS via Tailscale,
+the first-run setup, and troubleshooting — is in **[DEPLOY.md](DEPLOY.md)**.
 
-**[Full VPS walkthrough → HOSTINGER.md](HOSTINGER.md)** — including a
-[post-install script](scripts/hostinger-post-install.sh) that provisions the VPS
-with Syncwave already running, so you never have to SSH in at all.
-
-### 🐳 Anywhere else — Docker
+### For development
 
 ```bash
-cp .env.example .env       # set PUBLIC_URL=https://your.domain (or http://IP:3000)
-docker compose up -d --build
+npm install
+npm run dev                # http://localhost:3000
 ```
 
-Data persists in two bind-mounts: `./data` (rooms + settings) and `./cache`
-(resolved audio).
+### First run
 
-**Full instructions** — reverse proxies, HTTPS, Tailscale, and YouTube cookies for
-datacenter IPs — are in **[DEPLOY.md](DEPLOY.md)**.
+Syncwave sends you to **`/setup`** to create an admin password, then everything
+else lives at **`/admin`** behind it. **Do this right away** — until a password is
+set, anyone who can reach the address can claim the instance. Listening rooms are
+unaffected; the password only guards configuration.
 
-### After deploying
-
-Open your instance and it walks you through **`/setup`** — set an admin password,
-optionally upload a YouTube `cookies.txt`, optionally switch on the AI DJ. **Do
-this right away:** until a password is set, anyone who can reach the URL can claim
-it. Rooms themselves are unaffected; the password only guards configuration.
-
-> ### ⚠️ Where you host this decides whether music actually plays
+> ### 🏠 Run this at home, not on a cloud host
 >
-> **YouTube blocks datacenter IPs, and cookies do not lift the block.** Verified
-> on Railway with valid logged-in cookies, a working JS runtime, and all five
-> yt-dlp player clients — every one was refused. The same build on a home
-> connection works with no cookies at all.
+> **YouTube blocks datacenter IP ranges, and cookies do not lift the block.**
+> Tested on a cloud host with valid logged-in cookies, a working JS runtime, and
+> all five yt-dlp player clients — every one was refused. The identical build on a
+> home connection works with **no cookies at all**.
 >
-> - **Home server or residential-IP VPS** → playback works. This is the intended
->   way to run Syncwave.
-> - **Railway / Render / big-cloud VPS** → rooms, search, sync, and chat all work,
->   but tracks will not resolve unless you set `YTDLP_PROXY` to a residential
->   proxy.
->
-> A `cookies.txt` (uploaded at **`/admin` → YouTube access**) still helps on
-> borderline connections. Use a **throwaway Google account** — the file is a live
-> login session and every track the server fetches is attributed to it. Details in
-> [DEPLOY.md](DEPLOY.md).
+> That's why Syncwave targets home hosting: it just works there. On a VPS you'd
+> get rooms, search, sync, and chat, but tracks would never play unless the IP is
+> residential or you set `YTDLP_PROXY`. See [DEPLOY.md](DEPLOY.md).
 
 ## Configuration
 
-Copy `.env.example` to `.env`. Key settings:
+Everything is optional — copy `.env.example` to `.env` to change any of it.
 
-| Variable             | What it does                                                                 |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `PUBLIC_URL`         | Base URL of the instance. Falls back to `RENDER_EXTERNAL_URL` on Render.     |
-| `PORT`               | Port to listen on (default `3000`).                                          |
-| `DATA_DIR`           | Where rooms/settings JSON lives (default `./data`).                          |
-| `CACHE_DIR`          | Where resolved audio is cached (default `./cache`).                          |
-| `YTDLP_COOKIES_FILE` | Path to a YouTube `cookies.txt` (helps on datacenter IPs).                   |
+| Variable             | What it does                                                              |
+| -------------------- | ------------------------------------------------------------------------- |
+| `PUBLIC_URL`         | Base URL for share links. Unset = reflect the request origin (LAN-friendly). |
+| `PORT`               | Port to listen on (default `3000`).                                       |
+| `DATA_DIR`           | Rooms, settings, admin password, cookies (default `./data`).               |
+| `CACHE_DIR`          | Downloaded audio (default `./cache`).                                     |
+| `FFMPEG_PATH`        | Path to a specific ffmpeg binary. Auto-detected otherwise.                |
+| `YTDLP_COOKIES_FILE` | Path to a `cookies.txt`. Takes precedence over an upload.                 |
+| `YTDLP_PROXY`        | Proxy for all yt-dlp traffic.                                             |
 
 The **AI DJ** (provider, model, API key, persona) is configured at runtime in the
-in-app **Setup** console — no restart or rebuild needed.
+**`/admin`** console — no restart or rebuild needed.
 
 ## Legal
 

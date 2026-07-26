@@ -7,6 +7,7 @@ import next from "next";
 import { Server as IOServer } from "socket.io";
 import { registerRoomHandlers } from "./lib/rooms.mjs";
 import { handleAudioRequest, sweepCache } from "./lib/resolver.mjs";
+import { ffmpegMissing } from "./lib/ffmpeg.mjs";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "3000", 10);
@@ -24,13 +25,9 @@ const server = createServer((req, res) => {
   handle(req, res);
 });
 
-// Platforms inject their own public hostname, so a one-click deploy gets a
-// correct origin without the user setting anything. Railway gives a bare host,
-// Render gives a full URL.
-const railwayUrl = process.env.RAILWAY_PUBLIC_DOMAIN
-  ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
-  : "";
-const publicUrl = process.env.PUBLIC_URL || process.env.RENDER_EXTERNAL_URL || railwayUrl || "";
+// Unset means "reflect the requesting origin", which is what you want on a LAN
+// where the host is reached by IP, hostname, and tailnet name interchangeably.
+const publicUrl = process.env.PUBLIC_URL || "";
 
 const io = new IOServer(server, {
   cors: { origin: publicUrl || true },
@@ -43,4 +40,10 @@ setInterval(sweepCache, 60 * 60 * 1000);
 
 server.listen(port, () => {
   console.log(`> Syncwave ready on http://localhost:${port} (${dev ? "dev" : "prod"})`);
+  if (ffmpegMissing()) {
+    console.warn(
+      "! ffmpeg was not found. Tracks will fail to convert.\n" +
+        "  Install it and restart, or run `npm install` to fetch the bundled copy."
+    );
+  }
 });
