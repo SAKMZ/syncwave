@@ -175,7 +175,12 @@ direct attempt refused, while **4 of 10** commodity proxies fetched the same
 track fine. So Syncwave tries direct first and only falls back through a pool
 when the IP is refused, remembering which proxies worked.
 
-[![Deploy on Railway](https://img.shields.io/badge/Deploy%20on-Railway-0B0D0E.svg?style=for-the-badge&logo=railway&logoColor=white)](https://railway.com?referralCode=FNToXv)
+[![Deploy on Railway](https://img.shields.io/badge/Deploy%20on-Railway-0B0D0E.svg?style=for-the-badge&logo=railway&logoColor=white)](DEPLOY.md#option-d--railway)
+
+**[Step-by-step Railway guide →](DEPLOY.md#option-d--railway)** — repo to
+listening room in about ten minutes. It's a short guide because two steps are
+easy to miss: attach a volume *before* first boot, or your admin password and
+rooms vanish on the next redeploy; and configure a proxy pool, or nothing plays.
 
 Set one variable and playback works:
 

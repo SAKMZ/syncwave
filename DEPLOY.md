@@ -20,12 +20,14 @@ desktop, a spare laptop, a Raspberry Pi, a home server, a NAS.
 
 ## Pick how you want to run it
 
-| | [**Desktop launcher**](#option-a--desktop-launcher-easiest) | [**Docker**](#option-b--docker-best-for-an-always-on-box) | [**Linux installer**](#option-c--one-command-linux-installer) |
-|---|---|---|---|
-| Best for | Trying it out, occasional listening | A machine that's always on | A dedicated Linux box |
-| Setup | Double-click | Two commands | One command |
-| Needs | Nothing | Docker | Ubuntu/Debian + root |
-| Auto-restart | No | Yes | Yes |
+| | [**Desktop launcher**](#option-a--desktop-launcher-easiest) | [**Docker**](#option-b--docker-best-for-an-always-on-box) | [**Linux installer**](#option-c--one-command-linux-installer) | [**Railway**](#option-d--railway) |
+|---|---|---|---|---|
+| Best for | Trying it out, occasional listening | A machine that's always on | A dedicated Linux box | No hardware to spare |
+| Setup | Double-click | Two commands | One command | Web UI, ~10 min |
+| Needs | Nothing | Docker | Ubuntu/Debian + root | A card, and a proxy pool |
+| Auto-restart | No | Yes | Yes | Yes |
+| Plays music | Out of the box | Out of the box | Out of the box | **Only with a [proxy pool](#ytdlp_proxy)** |
+| Cost | Free | Free | Free | ~$5/mo after trial |
 
 ---
 
@@ -114,6 +116,103 @@ curl -fsSL https://raw.githubusercontent.com/SAKMZ/syncwave/main/scripts/install
 
 Re-run the same command any time to update in place. It's a readable shell
 script — [give it a skim](scripts/install.sh) before piping anything to `sudo`.
+
+---
+
+<a id="option-d--railway"></a>
+
+## Option D — Railway (cloud, no hardware)
+
+Use this when you have no machine to leave running. It is the only option where
+**playback does not work out of the box** — Railway runs on datacenter IPs, so
+you must configure a [proxy pool](#ytdlp_proxy) or every track will fail.
+
+> **Do step 4 before you open the app.** Without it you get rooms, search, sync
+> and chat, and every track returns "Sign in to confirm you're not a bot."
+
+**Cost:** the trial credit covers roughly a month; after that it's the Hobby plan
+(~$5/mo) plus a few cents for the volume. [Sign-up link](https://railway.com?referralCode=FNToXv)
+— a referral, which gives you $20 in credit.
+
+### 1. Create the service
+
+1. [**New Project → Deploy from GitHub repo**](https://railway.com/new), and pick
+   your fork of this repo (fork it first if you want to control when it updates).
+2. Railway detects the `Dockerfile` on its own. No build config needed.
+3. The first build takes a few minutes — it compiles the app and fetches ffmpeg
+   and a JS runtime.
+
+### 2. Add a volume — do this before the first successful boot
+
+Rooms, settings, your admin password and cached audio all live on disk. Without
+a volume they are wiped on every redeploy.
+
+**Service → Variables → + Volume**, mount path:
+
+```
+/var/syncwave
+```
+
+Railway allows one volume per service, so both directories live inside it.
+
+### 3. Set the variables
+
+**Service → Variables**:
+
+| Variable | Value |
+| --- | --- |
+| `DATA_DIR` | `/var/syncwave/data` |
+| `CACHE_DIR` | `/var/syncwave/cache` |
+| `PUBLIC_URL` | `https://${{RAILWAY_PUBLIC_DOMAIN}}` |
+
+`PORT` is injected by Railway and picked up automatically — don't set it.
+
+The `${{...}}` syntax is Railway's own variable reference, so the URL tracks your
+domain if it ever changes. Getting `PUBLIC_URL` right matters: it's what the
+Share button hands to your friends.
+
+### 4. Give it a working IP — the step everyone skips
+
+Add **one** of these, or nothing will play:
+
+| Variable | Value |
+| --- | --- |
+| `WEBSHARE_API_KEY` | your API token — the list is fetched and refreshed hourly |
+| `YTDLP_PROXY_LIST` | `http://user:pass@host:port,http://user:pass@host2:port` |
+
+A [free Webshare key](https://www.webshare.io/?referral_code=iw9gooahl4ty)
+(referral) gives 10 proxies and 1 GB/month — around 350–400 tracks. Syncwave
+tries the direct connection first and only falls back to the pool when Railway's
+IP is refused, so nothing is wasted.
+
+You can also paste either value into `/admin` later, without redeploying.
+
+### 5. Get a URL and claim it
+
+1. **Settings → Networking → Generate Domain**.
+2. Open that domain **immediately** and set an admin password at `/setup`.
+
+> Until you do, the instance is unclaimed and public — whoever loads `/setup`
+> first owns it. This matters far more on Railway than on a home box.
+
+### 6. Optional but recommended
+
+- **Settings → Deploy → Health Check Path**: `/api/health` — cheap, and never
+  touches yt-dlp or the network.
+- **Settings → Deploy → Restart Policy**: `On Failure`.
+
+### Checking it worked
+
+Queue a track. If it plays, you're done. If it doesn't, open the deploy logs and
+look for the resolver line:
+
+```
+[resolver] <id>: direct refused — trying 1.2.3.4:6754
+[resolver] <id>: served via 1.2.3.4:6754
+```
+
+That is the fallback doing its job. If instead you see every proxy refused, the
+pool is exhausted or the key is wrong — [see the troubleshooting section](#if-tracks-wont-play).
 
 ---
 
