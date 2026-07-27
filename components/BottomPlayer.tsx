@@ -235,9 +235,17 @@ export default function BottomPlayer({
           <ReactionBar onReact={onReact} className="hidden md:flex" />
         </div>
 
-        {/* On a phone the top row is already full, so the reactions get their
-            own line rather than being hidden behind a button. */}
-        <ReactionBar onReact={onReact} className="order-4 col-span-2 justify-center md:hidden" />
+      </div>
+
+      {/* On a phone the reactions float just above the bar instead of sitting
+          inside it. A row within the grid made the player 172px tall, which
+          pushed the room's own content underneath it — this costs no layout
+          height at all. */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2 md:hidden">
+        <ReactionBar
+          onReact={onReact}
+          className="pointer-events-auto rounded-full border border-white/10 bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] px-1 py-0.5 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.7)] backdrop-blur-xl"
+        />
       </div>
     </footer>
   );

@@ -48,7 +48,11 @@ export default function NowPlaying({
   const loading = preparing || buffering;
 
   return (
-    <section className={cn("sw-glass flex flex-col p-5", className)}>
+    // min-h-0 is load-bearing: a flex child defaults to min-height:auto, so
+    // `flex-1` alone won't let this shrink below its content and it renders
+    // straight through the player instead. With it, the panel is bounded and
+    // scrolls internally on a short screen rather than escaping.
+    <section className={cn("sw-glass sw-scroll flex min-h-0 flex-col overflow-y-auto p-5", className)}>
       <div className="sw-label mb-4 justify-between">
         <span className="flex items-center gap-2">
           <Radio className="size-3.5" /> Now playing
@@ -62,7 +66,13 @@ export default function NowPlaying({
       {/* Artwork. The glow lives on the wrapper because .sw-art clips overflow. */}
       <div
         className={cn(
-          "sw-art-glow mx-auto aspect-square w-full max-w-[260px]",
+          // Capped by viewport height as well as width, so on a short phone the
+          // cover gives way rather than shoving everything below it off-screen.
+          // At 812 (most phones) that lands at 244px and the whole panel fits.
+          // A 667 screen — an SE, an older 8 — needs another ~75px from
+          // somewhere, and the cover is the only thing here that can spare it.
+          "sw-art-glow mx-auto aspect-square w-full max-w-[min(260px,30vh)] shrink-0",
+          "[@media(max-height:720px)]:max-w-[120px]",
           isPlaying && !loading && "sw-art-playing"
         )}
       >
@@ -141,7 +151,11 @@ export default function NowPlaying({
 
       {/* Who's here. The point of the app is that these people hear the same
           thing at the same moment, so it's worth showing rather than a count. */}
-      <div className="mt-auto pt-6">
+      {/* Deliberately not mt-auto. Pinning this to the bottom works on a tall
+          screen, but once the panel scrolls it pins to the bottom of the
+          *scrollable* content — pushing the listeners out of view entirely.
+          Flowing straight after the equalizer keeps them where you'd look. */}
+      <div className="pt-6">
         <div className="sw-label mb-2">Listening</div>
         {/* Chips that wrap, not a column that grows. A room of six used to run
             a list long enough to slide under the player on a phone; sideways

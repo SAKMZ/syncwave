@@ -375,7 +375,10 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
         <div className="shrink-0 px-3 pt-3 md:hidden">
           <TabBar tab={tab} setTab={setTab} queueCount={queue.length} unread={unread} />
         </div>
-        <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 p-3 sm:p-4 md:grid md:h-full md:grid-cols-[minmax(0,1fr)_340px] md:gap-4 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
+        {/* The extra bottom padding on phones is the reaction pill's safe area:
+            it floats over this region, and without the gap it sits on top of
+            whatever the panel ends with. */}
+        <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 px-3 pb-14 pt-3 sm:px-4 sm:pt-4 md:grid md:h-full md:grid-cols-[minmax(0,1fr)_340px] md:gap-4 md:pb-4 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
           {/* now playing — its own mobile tab, a dedicated column on wide screens */}
           <NowPlaying
             current={current}
