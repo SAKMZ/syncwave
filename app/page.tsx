@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ListMusic, MessageSquare, Bot, ShieldCheck, Lock } from "lucide-react";
 import CreateRoom from "@/components/CreateRoom";
+import MadeWithLove from "@/components/MadeWithLove";
 import { isSetupComplete } from "@/lib/auth.mjs";
 
 export const dynamic = "force-dynamic";
@@ -87,11 +88,15 @@ export default function Home() {
         ))}
       </div>
 
-      <p className="mt-12 text-sm text-ink/40">
-        <Link href="/admin" className="text-accent-2 underline-offset-4 hover:underline">
-          Server settings
-        </Link>
-      </p>
+      <footer className="mt-12 flex flex-col items-center gap-3">
+        <p className="text-sm text-ink/40">
+          <Link href="/admin" className="text-accent-2 underline-offset-4 hover:underline">
+            Server settings
+          </Link>
+        </p>
+
+        <MadeWithLove />
+      </footer>
     </main>
   );
 }

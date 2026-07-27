@@ -273,6 +273,19 @@ video {
 }
 .sw-float { animation: sw-float 2.6s ease-out forwards; }
 
+/* The heart in the footer. Two beats then a rest, like a real one, rather than
+   a steady throb — slow enough to notice only if you're looking at it. */
+@keyframes sw-heartbeat {
+  0%, 28%, 100% { transform: scale(1); }
+  8%  { transform: scale(1.22); }
+  16% { transform: scale(1); }
+  22% { transform: scale(1.14); }
+}
+.sw-heartbeat {
+  display: inline-block;
+  animation: sw-heartbeat 3.2s ease-in-out infinite;
+}
+
 /* Spinning disc for the artwork while playing. */
 @keyframes sw-spin { to { transform: rotate(360deg); } }
 .sw-spin { animation: sw-spin 8s linear infinite; }
@@ -413,7 +426,8 @@ video {
   .sw-aurora,
   .sw-spin,
   .sw-eq > span,
-  .sw-float {
+  .sw-float,
+  .sw-heartbeat {
     animation: none !important;
   }
   .sw-eq > span { height: 8px; }

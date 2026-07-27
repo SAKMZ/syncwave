@@ -23,6 +23,7 @@ import SearchPanel from "@/components/SearchPanel";
 import NowPlaying from "@/components/NowPlaying";
 import InstallButton, { InstallBanner } from "@/components/InstallButton";
 import ShareButton from "@/components/ShareButton";
+import MadeWithLove from "@/components/MadeWithLove";
 
 type Status = { state: "cached" | "downloading" | "pending"; percent: number };
 type Track = {
@@ -262,6 +263,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
           </Button>
           {error && <p className="mt-3 text-sm text-[var(--destructive)]">{error}</p>}
         </div>
+        <MadeWithLove className="mt-8 text-center" />
       </main>
     );
   }
