@@ -160,16 +160,41 @@ else lives at **`/admin`** behind it. **Do this right away** — until a passwor
 set, anyone who can reach the address can claim the instance. Listening rooms are
 unaffected; the password only guards configuration.
 
-> ### 🏠 Run this at home, not on a cloud host
+### Cloud host — works, with a proxy pool
+
+Home is still the path of least resistance: it works with no configuration at
+all. But a cloud VPS is workable now, and here is the honest version of why.
+
+**YouTube refuses most datacenter IPs, and cookies do not lift it.** Tested on a
+cloud host with valid logged-in cookies, a working JS runtime, and all five
+yt-dlp player clients — every one refused. The identical build at home works
+with **no cookies at all**.
+
+The refusal is not uniform, though. Measured from one cloud instance: every
+direct attempt refused, while **4 of 10** commodity proxies fetched the same
+track fine. So Syncwave tries direct first and only falls back through a pool
+when the IP is refused, remembering which proxies worked.
+
+[![Deploy on Railway](https://img.shields.io/badge/Deploy%20on-Railway-0B0D0E.svg?style=for-the-badge&logo=railway&logoColor=white)](https://railway.com?referralCode=FNToXv)
+
+Set one variable and playback works:
+
+```bash
+WEBSHARE_API_KEY=your-key    # or YTDLP_PROXY_LIST=http://user:pass@host:port,...
+```
+
+You can also paste either one into **`/admin`** on a running instance — no
+redeploy. A [free Webshare key](https://www.webshare.io/?referral_code=iw9gooahl4ty)
+gives 10 proxies and 1 GB/month.
+
+> **Mind the bandwidth.** Tracks fetched through a proxy are capped to a lower
+> bitrate — about **1.6 MB** each instead of 4.3 MB — so 1 GB is roughly **500
+> tracks a month**. Plenty for a few friends; not enough for a public instance.
+> Direct connections are never capped, and every track is cached for 72h, so
+> repeat plays are free.
 >
-> **YouTube blocks datacenter IP ranges, and cookies do not lift the block.**
-> Tested on a cloud host with valid logged-in cookies, a working JS runtime, and
-> all five yt-dlp player clients — every one was refused. The identical build on a
-> home connection works with **no cookies at all**.
->
-> That's why Syncwave targets home hosting: it just works there. On a VPS you'd
-> get rooms, search, sync, and chat, but tracks would never play unless the IP is
-> residential or you set `YTDLP_PROXY`. See [DEPLOY.md](DEPLOY.md).
+> *(Railway and Webshare links are referrals. They cost you nothing and the
+> Railway one gives you $20 in credit.)*
 
 ## Configuration
 
@@ -183,10 +208,13 @@ Everything is optional — copy `.env.example` to `.env` to change any of it.
 | `CACHE_DIR`          | Downloaded audio (default `./cache`).                                     |
 | `FFMPEG_PATH`        | Path to a specific ffmpeg binary. Auto-detected otherwise.                |
 | `YTDLP_COOKIES_FILE` | Path to a `cookies.txt`. Takes precedence over an upload.                 |
-| `YTDLP_PROXY`        | Proxy for all yt-dlp traffic.                                             |
+| `WEBSHARE_API_KEY`   | Fetches a proxy pool and refreshes it hourly. Also settable in `/admin`.   |
+| `YTDLP_PROXY_LIST`   | Comma-separated proxy URLs, any provider. Also settable in `/admin`.       |
+| `YTDLP_PROXY`        | A single proxy, always tried first.                                       |
+| `PROXY_MAX_ABR`      | Bitrate cap (kbps) for proxied downloads only. Default `96`, `0` disables. |
 
-The **AI DJ** (provider, model, API key, persona) is configured at runtime in the
-**`/admin`** console — no restart or rebuild needed.
+The **AI DJ** (provider, model, API key, persona) and the **proxy pool** are
+configured at runtime in the **`/admin`** console — no restart or rebuild needed.
 
 ## Legal
 

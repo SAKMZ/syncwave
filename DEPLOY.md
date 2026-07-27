@@ -10,10 +10,13 @@ desktop, a spare laptop, a Raspberry Pi, a home server, a NAS.
 > clients: every one was refused with *"Sign in to confirm you're not a bot."*
 > The identical build on a home connection works with **no cookies at all**.
 >
-> Rooms, search, sync, and chat would still work on a cloud box — but tracks
-> would never play, which is the whole point. So Syncwave targets home hosting,
-> where it works out of the box. If you must run it on a VPS, use one with a
-> residential IP or set [`YTDLP_PROXY`](#ytdlp_proxy).
+> The block is not uniform, though: from one cloud instance every direct attempt
+> was refused while **4 of 10** commodity proxies fetched the same track fine. So
+> a VPS does work — point Syncwave at a [proxy pool](#ytdlp_proxy) and it tries
+> direct first, falling back only when refused.
+>
+> Home hosting is still the path of least resistance, because it needs no
+> configuration and has no bandwidth ceiling.
 
 ## Pick how you want to run it
 

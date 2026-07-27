@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPublicSettings, updateSettings } from "@/lib/settings.mjs";
 import { PERSONAS } from "@/lib/personas.mjs";
+import { resetProxyCache } from "@/lib/proxies.mjs";
 import { requireAdmin } from "@/lib/guard";
 
 export const dynamic = "force-dynamic";
@@ -18,5 +19,8 @@ export async function POST(req: NextRequest) {
   if (denied) return denied;
   const patch = await req.json();
   const settings = await updateSettings(patch);
+  // Whatever the pool learned was about the old credentials, and a fresh key
+  // should be tried immediately rather than after the cache expires.
+  if ("webshareApiKey" in patch || "proxyList" in patch) resetProxyCache();
   return NextResponse.json({ settings });
 }
