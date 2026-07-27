@@ -10,7 +10,6 @@ import {
   Repeat1,
   Loader2,
   Disc3,
-  Smile,
   Volume1,
   Volume2,
   VolumeX,
@@ -78,7 +77,6 @@ export default function BottomPlayer({
   onRepeat: () => void;
   onReact: (emoji: string) => void;
 }) {
-  const [reactOpen, setReactOpen] = useState(false);
   const dur = duration || current?.duration || 0;
   const cachePct = downloadPct ?? 0;
   const playPct = dur ? Math.min(100, (position / dur) * 100) : 0;
@@ -90,11 +88,6 @@ export default function BottomPlayer({
     const rect = e.currentTarget.getBoundingClientRect();
     const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
     onSeek(ratio * dur);
-  };
-
-  const react = (emoji: string) => {
-    onReact(emoji);
-    setReactOpen(false);
   };
 
   const status = preparing
@@ -236,39 +229,46 @@ export default function BottomPlayer({
           </div>
         </div>
 
-        {/* ── right: volume + reactions ── */}
+        {/* ── right: volume, plus reactions where there's room for them ── */}
         <div className="flex items-center justify-end gap-1">
           <Volume volume={volume} onVolume={onVolume} />
-          <div className="relative">
-            <button
-              onClick={() => setReactOpen((v) => !v)}
-              className="grid size-9 place-items-center rounded-full text-ink/65 transition-colors hover:bg-white/10 hover:text-ink"
-              aria-label="Send a reaction"
-              title="Send a reaction"
-            >
-              <Smile className="size-4" />
-            </button>
-            {reactOpen && (
-              <>
-                <div className="fixed inset-0 z-40" onClick={() => setReactOpen(false)} />
-                <div className="sw-fade-in absolute bottom-12 right-0 z-50 flex gap-1 rounded-full border border-white/10 bg-[var(--popover)] p-1.5 shadow-xl">
-                  {REACTIONS.map((e: string) => (
-                    <button
-                      key={e}
-                      onClick={() => react(e)}
-                      className="grid size-9 place-items-center rounded-full text-lg transition-transform hover:scale-125 active:scale-95"
-                      aria-label={`React ${e}`}
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+          <ReactionBar onReact={onReact} className="hidden md:flex" />
         </div>
+
+        {/* On a phone the top row is already full, so the reactions get their
+            own line rather than being hidden behind a button. */}
+        <ReactionBar onReact={onReact} className="order-4 col-span-2 justify-center md:hidden" />
       </div>
     </footer>
+  );
+}
+
+/**
+ * Reactions, always visible. They used to live behind a smiley: tap to open,
+ * tap to react, popover closes — so cheering three times cost six taps and the
+ * moment had passed. One tap is the whole interaction now.
+ */
+function ReactionBar({
+  onReact,
+  className,
+}: {
+  onReact: (emoji: string) => void;
+  className?: string;
+}) {
+  return (
+    <div className={cn("flex items-center gap-0.5", className)}>
+      {REACTIONS.map((e: string) => (
+        <button
+          key={e}
+          onClick={() => onReact(e)}
+          className="grid size-8 shrink-0 place-items-center rounded-full text-base transition-transform hover:scale-125 hover:bg-white/10 active:scale-90"
+          aria-label={`React ${e}`}
+          title={`React ${e}`}
+        >
+          {e}
+        </button>
+      ))}
+    </div>
   );
 }
 

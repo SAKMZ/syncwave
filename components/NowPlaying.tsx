@@ -143,17 +143,23 @@ export default function NowPlaying({
           thing at the same moment, so it's worth showing rather than a count. */}
       <div className="mt-auto pt-6">
         <div className="sw-label mb-2">Listening</div>
-        <ul className="sw-scroll flex max-h-40 flex-col gap-0.5 overflow-y-auto">
+        {/* Chips that wrap, not a column that grows. A room of six used to run
+            a list long enough to slide under the player on a phone; sideways
+            it stays put, and a crowd still caps out at a scroll of its own. */}
+        <ul className="sw-scroll flex max-h-[4.75rem] flex-wrap gap-1.5 overflow-y-auto">
           {participants.map((p) => (
-            <li key={p.id} className="flex items-center gap-2 py-0.5 text-sm">
+            <li
+              key={p.id}
+              className="flex min-w-0 max-w-full items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.04] py-1 pl-2 pr-2.5 text-xs"
+            >
               <span
-                className="size-2 shrink-0 rounded-full"
+                className="size-1.5 shrink-0 rounded-full"
                 style={{ background: dotColor(p.nick) }}
                 aria-hidden
               />
               <span className="truncate text-ink-soft">{p.nick}</span>
               {p.isHost && (
-                <Crown className="size-3 shrink-0 text-[var(--accent)]" aria-label="host" />
+                <Crown className="size-2.5 shrink-0 text-[var(--accent)]" aria-label="host" />
               )}
             </li>
           ))}

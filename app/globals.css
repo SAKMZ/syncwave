@@ -264,14 +264,32 @@ video {
   50% { height: 14px; }
 }
 
-/* Floating emoji reactions. */
+/* Floating emoji reactions. One tap sends a burst rather than a single
+   balloon, so each one needs its own drift, size and start delay — otherwise
+   five identical emoji rise as one thick stripe. */
 @keyframes sw-float {
-  0% { transform: translateY(0) scale(0.5); opacity: 0; }
-  12% { transform: translateY(-16px) scale(1.1); opacity: 1; }
+  0% {
+    transform: translate(0, 0) scale(calc(var(--sw-f-scale, 1) * 0.5));
+    opacity: 0;
+  }
+  12% {
+    transform: translate(calc(var(--sw-f-drift, 0px) * 0.15), -16px)
+      scale(calc(var(--sw-f-scale, 1) * 1.1));
+    opacity: 1;
+  }
   75% { opacity: 1; }
-  100% { transform: translateY(-260px) scale(1.3) rotate(8deg); opacity: 0; }
+  100% {
+    transform: translate(var(--sw-f-drift, 0px), -260px)
+      scale(calc(var(--sw-f-scale, 1) * 1.3)) rotate(var(--sw-f-spin, 8deg));
+    opacity: 0;
+  }
 }
-.sw-float { animation: sw-float 2.6s ease-out forwards; }
+.sw-float {
+  animation: sw-float 2.6s ease-out forwards;
+  animation-delay: var(--sw-f-delay, 0ms);
+  /* Without this the emoji is painted at full size until its delay elapses. */
+  opacity: 0;
+}
 
 /* The heart in the footer. Two beats then a rest, like a real one, rather than
    a steady throb — slow enough to notice only if you're looking at it. */

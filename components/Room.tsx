@@ -64,7 +64,17 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<Repeat>("off");
   const [dl, setDl] = useState<Record<string, number>>({});
-  const [floats, setFloats] = useState<{ id: string; emoji: string; left: number }[]>([]);
+  const [floats, setFloats] = useState<
+    {
+      id: string;
+      emoji: string;
+      left: number;
+      delay: number;
+      drift: number;
+      scale: number;
+      spin: number;
+    }[]
+  >([]);
   const [tab, setTab] = useState<Tab>("now");
   const [unread, setUnread] = useState(0);
   // Local per-listener volume — everyone controls their own, unlike playback.
@@ -146,9 +156,23 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       if (!m.system) setUnread((u) => u + 1);
     });
     socket.on(EVENTS.REACTION_NEW, ({ id, emoji }: { id: string; emoji: string }) => {
-      const f = { id, emoji, left: 8 + Math.random() * 84 };
-      setFloats((cur) => [...cur, f]);
-      setTimeout(() => setFloats((cur) => cur.filter((x) => x.id !== id)), 2600);
+      // One tap should read as a cheer, not a single balloon. The server still
+      // sends one event; each client blooms it into a small burst, so the
+      // celebration costs nothing extra on the wire and everyone sees one.
+      const n = 4 + Math.floor(Math.random() * 3); // 4–6
+      const burst = Array.from({ length: n }, (_, i) => ({
+        id: `${id}-${i}`,
+        emoji,
+        left: 8 + Math.random() * 84,
+        delay: Math.round(i * 70 + Math.random() * 70),
+        drift: Math.round((Math.random() - 0.5) * 90),
+        scale: 0.75 + Math.random() * 0.6,
+        spin: Math.round((Math.random() - 0.5) * 50),
+      }));
+      setFloats((cur) => [...cur, ...burst]);
+      const ids = new Set(burst.map((b) => b.id));
+      // Longest delay plus the animation, with a little slack.
+      setTimeout(() => setFloats((cur) => cur.filter((x) => !ids.has(x.id))), 3400);
     });
     socket.on(EVENTS.DOWNLOAD_PROGRESS, ({ videoId, percent }: { videoId: string; percent: number }) =>
       setDl((d) => ({ ...d, [videoId]: percent }))
@@ -281,7 +305,19 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       {/* floating emoji reactions */}
       <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
         {floats.map((f) => (
-          <span key={f.id} className="sw-float absolute bottom-24 text-4xl" style={{ left: `${f.left}%` }}>
+          <span
+            key={f.id}
+            className="sw-float absolute bottom-24 text-4xl"
+            style={
+              {
+                left: `${f.left}%`,
+                "--sw-f-delay": `${f.delay}ms`,
+                "--sw-f-drift": `${f.drift}px`,
+                "--sw-f-scale": f.scale,
+                "--sw-f-spin": `${f.spin}deg`,
+              } as React.CSSProperties
+            }
+          >
             {f.emoji}
           </span>
         ))}
@@ -320,8 +356,16 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
             </span>
             <span className="font-mono text-xs font-bold tracking-[0.18em] text-ink">{code}</span>
           </span>
-          <Participants list={participants} />
-          <InstallButton />
+          {/* Redundant on xl, where Now Playing lists these people in full. */}
+          <span className="xl:hidden">
+            <Participants list={participants} />
+          </span>
+          {/* The banner below says the same thing with room to explain why, so
+              only one of the two is ever on screen: banner on phones, where
+              installing actually matters, this button on desktop. */}
+          <span className="hidden md:inline-flex">
+            <InstallButton />
+          </span>
           <ShareButton code={code} />
         </div>
       </header>
@@ -379,7 +423,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
           />
         </div>
 
-        <div className="px-3 pb-2 md:mx-auto md:w-full md:max-w-7xl md:px-4">
+        <div className="px-3 pb-2 md:hidden">
           <InstallBanner code={code} />
         </div>
       </main>
