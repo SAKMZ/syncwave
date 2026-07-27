@@ -10,6 +10,9 @@ build/
 next-env.d.ts
 tsconfig.tsbuildinfo
 
+# private node copy the launcher fetches when the machine has none
+.runtime/
+
 # runtime
 .env
 .env.local

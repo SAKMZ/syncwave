@@ -55,9 +55,12 @@ function run(cmd, args, extraEnv = {}) {
 // ---------------------------------------------------------------- node version
 const major = Number(process.versions.node.split(".")[0]);
 if (major < 20) {
+  // start.bat / start.sh fetch a private Node when the machine has none, so
+  // reaching this means launch.mjs was run directly with an old one.
   die(
     `Syncwave needs Node 20 or newer — this is Node ${process.versions.node}.\n` +
-      `Download the current LTS from https://nodejs.org and run this again.`
+      `Start it with ${isWin ? "start.bat" : "./start.sh"}, which sorts Node out for you,\n` +
+      `or install the current LTS from https://nodejs.org.`
   );
 }
 

@@ -62,8 +62,9 @@ a study room, a Discord community's permanent hangout.
   tabbed Queue / Add / Chat) that fits a phone screen, plus an aurora backdrop,
   album-art ambient glow, and glassmorphism.
 - 🖱️ **Runs by double-clicking** — a launcher installs, builds, and starts it, then
-  prints the address to share. ffmpeg and a JS runtime are bundled, so Node is the
-  only prerequisite. Docker and a one-command Linux installer are there too.
+  prints the address to share. **Nothing to install first:** it fetches its own
+  Node if you don't have one, and ffmpeg and a JS runtime come bundled. Docker and
+  a one-command Linux installer are there too.
 - 🌍 **A shareable link out of the box** — the launcher prints a public HTTPS URL
   via a Cloudflare quick tunnel, so friends anywhere can join. No account, no port
   forwarding, no domain. `--local` keeps it on your network; Tailscale and
@@ -86,9 +87,17 @@ It all runs in **one process / one container**.
 
 ### Easiest — double-click a file
 
-1. Install [Node.js LTS](https://nodejs.org).
-2. Download this repo (**Code → Download ZIP**) and unzip it.
-3. **Windows:** double-click `start.bat` · **macOS/Linux:** `./start.sh`
+1. Download this repo (**Code → Download ZIP**) and unzip it.
+2. **Windows:** double-click `start.bat` · **macOS/Linux:** `./start.sh`
+
+That's the whole list — there is no step 0. If the machine has no Node.js (or
+one older than 20), the launcher downloads an official copy from `nodejs.org`,
+checks it against the published SHA-256, and keeps it in a `.runtime` folder
+beside the app. Nothing is installed system-wide, no PATH or registry changes,
+and deleting `.runtime` undoes it. An existing Node 20+ is used as-is.
+
+ffmpeg **and** a JavaScript runtime come bundled too — YouTube refuses downloads
+without a JS runtime, so that one isn't optional.
 
 The first run installs and builds (a few minutes); after that it starts in
 seconds and opens your browser:
@@ -97,9 +106,6 @@ seconds and opens your browser:
   On this computer   http://localhost:3000
   On your network    http://192.168.1.42:3000
 ```
-
-ffmpeg **and** a JavaScript runtime come bundled, so there is nothing else to
-install — YouTube requires the JS runtime and refuses downloads without one.
 
 ### Your friends aren't on your Wi-Fi, so you also get a public link
 

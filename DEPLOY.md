@@ -21,7 +21,7 @@ desktop, a spare laptop, a Raspberry Pi, a home server, a NAS.
 |---|---|---|---|
 | Best for | Trying it out, occasional listening | A machine that's always on | A dedicated Linux box |
 | Setup | Double-click | Two commands | One command |
-| Needs | Node 20+ | Docker | Ubuntu/Debian + root |
+| Needs | Nothing | Docker | Ubuntu/Debian + root |
 | Auto-restart | No | Yes | Yes |
 
 ---
@@ -30,11 +30,16 @@ desktop, a spare laptop, a Raspberry Pi, a home server, a NAS.
 
 No Docker, no terminal, no config files.
 
-1. Install [Node.js LTS](https://nodejs.org) if you don't have it.
-2. Download this repo (green **Code** button → **Download ZIP**) and unzip it.
-3. Run the launcher:
+1. Download this repo (green **Code** button → **Download ZIP**) and unzip it.
+2. Run the launcher:
    - **Windows** — double-click **`start.bat`**
    - **macOS / Linux** — `./start.sh`
+
+There is nothing to install first. If the machine has no Node.js — or one older
+than 20 — the launcher fetches an official build from `nodejs.org`, verifies it
+against the published SHA-256, and unpacks it into a `.runtime` folder beside
+the app. Nothing goes into your system, your PATH, or the registry, and deleting
+`.runtime` reverses it. If you already have Node 20+, that one is used instead.
 
 The first run installs dependencies and builds the app, which takes a few
 minutes. After that it starts in seconds. Your browser opens automatically, and
