@@ -69,10 +69,10 @@ export default function NowPlaying({
           // Capped by viewport height as well as width, so on a short phone the
           // cover gives way rather than shoving everything below it off-screen.
           // At 812 (most phones) that lands at 244px and the whole panel fits.
-          // A 667 screen — an SE, an older 8 — needs another ~75px from
-          // somewhere, and the cover is the only thing here that can spare it.
+          // A 667 screen — an SE, an older 8 — is still short by a little, so
+          // the cover gives that up rather than anything being cut off.
           "sw-art-glow mx-auto aspect-square w-full max-w-[min(260px,30vh)] shrink-0",
-          "[@media(max-height:720px)]:max-w-[120px]",
+          "[@media(max-height:720px)]:max-w-[170px]",
           isPlaying && !loading && "sw-art-playing"
         )}
       >
@@ -151,11 +151,13 @@ export default function NowPlaying({
 
       {/* Who's here. The point of the app is that these people hear the same
           thing at the same moment, so it's worth showing rather than a count. */}
-      {/* Deliberately not mt-auto. Pinning this to the bottom works on a tall
+      {/* Desktop only. On a phone the header's people button already lists
+          everyone, and repeating it here cost the room's scarcest resource —
+          vertical space — to say the same thing twice.
+          Deliberately not mt-auto: pinning to the bottom works on a tall
           screen, but once the panel scrolls it pins to the bottom of the
-          *scrollable* content — pushing the listeners out of view entirely.
-          Flowing straight after the equalizer keeps them where you'd look. */}
-      <div className="pt-6">
+          *scrollable* content, pushing the listeners out of view entirely. */}
+      <div className="hidden pt-6 xl:block">
         <div className="sw-label mb-2">Listening</div>
         {/* Chips that wrap, not a column that grows. A room of six used to run
             a list long enough to slide under the player on a phone; sideways
