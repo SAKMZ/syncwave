@@ -239,13 +239,40 @@ the very next track — no restart.
 > people can reach.
 
 **4. Your IP range is blocked outright.** Cookies won't help — see the note at
-the top. Use a residential connection, or a proxy:
+the top. A residential connection is still the best answer. Failing that, use a
+proxy pool.
 
 <a id="ytdlp_proxy"></a>
+
+The block turns out not to be uniform. Measured on a fresh cloud instance: every
+direct attempt was refused, while **4 of 10** proxies from the same commodity
+provider fetched the same track fine. So Syncwave tries the direct connection
+first and only falls back to the pool when the IP is refused — then remembers
+which proxies worked, so the next track starts with one that just succeeded.
+
+Point it at a provider and the list is fetched and refreshed hourly:
+
+```
+WEBSHARE_API_KEY=your-api-key
+```
+
+Or supply addresses yourself, from any provider:
+
+```
+YTDLP_PROXY_LIST=http://user:pass@host1:port,http://user:pass@host2:port
+```
+
+Or keep a single fixed proxy, which is always tried first:
 
 ```
 YTDLP_PROXY=http://user:pass@residential-proxy.example:8000
 ```
+
+> **Watch the bandwidth.** Audio is roughly **5 MB per track**, so a 1 GB/month
+> free plan is about **200 tracks** — fine for a few friends, nowhere near
+> enough for a public instance. Syncwave caches each track for 72h, so repeat
+> plays cost nothing, and the direct-first order means a home install never
+> touches the pool at all.
 
 ---
 
@@ -261,7 +288,9 @@ Everything is optional. Copy `.env.example` to `.env` to change any of it.
 | `CACHE_DIR` | Downloaded audio (default `./cache`). |
 | `FFMPEG_PATH` | Path to a specific ffmpeg binary. Auto-detected otherwise. |
 | `YTDLP_COOKIES_FILE` | Path to a `cookies.txt`. Takes precedence over an upload and disables the upload button. |
-| `YTDLP_PROXY` | Proxy for all yt-dlp traffic. |
+| `WEBSHARE_API_KEY` | Fetches a proxy pool from Webshare and refreshes it hourly. |
+| `YTDLP_PROXY_LIST` | Comma-separated proxy URLs, any provider. Used instead of the API key. |
+| `YTDLP_PROXY` | A single proxy, always tried first. Works alone, or alongside a pool. |
 
 The **AI DJ** (provider, model, API key, persona) is configured at runtime in
 the **`/admin`** console — no restart, no rebuild.
