@@ -188,10 +188,11 @@ redeploy. A [free Webshare key](https://www.webshare.io/?referral_code=iw9gooahl
 gives 10 proxies and 1 GB/month.
 
 > **Mind the bandwidth.** Tracks fetched through a proxy are capped to a lower
-> bitrate — about **1.6 MB** each instead of 4.3 MB — so 1 GB is roughly **500
-> tracks a month**. Plenty for a few friends; not enough for a public instance.
-> Direct connections are never capped, and every track is cached for 72h, so
-> repeat plays are free.
+> bitrate — about **1.6 MB** each instead of 4.3 MB. Measured end to end a track
+> costs ~2.7 MB once metadata and protocol overhead are counted, so 1 GB is
+> roughly **350–400 tracks a month**. Plenty for a few friends; not enough for a
+> public instance. Direct connections are never capped, and every track is cached
+> for 72h, so repeat plays are free.
 >
 > *(Railway and Webshare links are referrals. They cost you nothing and the
 > Railway one gives you $20 in credit.)*

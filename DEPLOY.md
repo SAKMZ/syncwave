@@ -271,9 +271,10 @@ Or keep a single fixed proxy, which is always tried first:
 YTDLP_PROXY=http://user:pass@residential-proxy.example:8000
 ```
 
-> **Watch the bandwidth.** Audio is roughly **5 MB per track**, so a 1 GB/month
-> free plan is about **200 tracks** — fine for a few friends, nowhere near
-> enough for a public instance. Syncwave caches each track for 72h, so repeat
+> **Watch the bandwidth.** Measured end to end, a proxied track costs about
+> **2.7 MB** — the file itself is ~1.6 MB and the rest is metadata requests and
+> protocol overhead. So a 1 GB/month free plan is roughly **350–400 tracks**:
+> fine for a few friends, nowhere near enough for a public instance. Syncwave caches each track for 72h, so repeat
 > plays cost nothing, and the direct-first order means a home install never
 > touches the pool at all.
 

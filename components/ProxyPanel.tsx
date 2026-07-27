@@ -100,7 +100,7 @@ export default function ProxyPanel() {
           >
             Get a free key <ExternalLink className="size-3" />
           </a>{" "}
-          — 10 proxies and 1 GB/month, about 500 tracks. Referral link.
+          — 10 proxies and 1 GB/month, around 350–400 tracks. Referral link.
         </p>
         {saved?.hasWebshareKey && (
           <p className="flex items-center gap-1.5 text-xs text-[#7ee787]">
