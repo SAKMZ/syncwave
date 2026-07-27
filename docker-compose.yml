@@ -13,6 +13,11 @@ services:
       - DATA_DIR=/app/data
       # On a VPS, mount a cookies file and point this at it for reliable playback:
       - YTDLP_COOKIES_FILE=${YTDLP_COOKIES_FILE:-}
+      # Cloud IPs get bot-checked. Syncwave tries direct first and falls back
+      # through a proxy pool only when refused — see DEPLOY.md.
+      - WEBSHARE_API_KEY=${WEBSHARE_API_KEY:-}
+      - YTDLP_PROXY_LIST=${YTDLP_PROXY_LIST:-}
+      - YTDLP_PROXY=${YTDLP_PROXY:-}
     volumes:
       - ./cache:/app/cache # resolved audio (72h retention)
       - ./data:/app/data # durable rooms, settings, cache index
