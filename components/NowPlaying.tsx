@@ -52,12 +52,25 @@ export default function NowPlaying({
     // `flex-1` alone won't let this shrink below its content and it renders
     // straight through the player instead. With it, the panel is bounded and
     // scrolls internally on a short screen rather than escaping.
-    <section className={cn("sw-glass sw-scroll flex min-h-0 flex-col overflow-y-auto p-5", className)}>
+    // `safe center` rather than plain centring: once the content is taller than
+    // the panel, ordinary centring overflows in both directions and hides the
+    // top with no way to scroll back to it. `safe` falls back to top-aligned
+    // exactly then, so a crowded room degrades instead of losing the artwork.
+    <section
+      className={cn(
+        "sw-glass sw-scroll flex min-h-0 flex-col overflow-y-auto p-5 [justify-content:safe_center]",
+        className
+      )}
+    >
       <div className="sw-label mb-4 justify-between">
         <span className="flex items-center gap-2">
           <Radio className="size-3.5" /> Now playing
         </span>
-        <span className="flex items-center gap-1.5 normal-case tracking-normal">
+        {/* Only where it earns its place. Below xl the header's people button
+            shows this exact icon and number a few dozen pixels away; at xl it
+            summarises a list that can scroll, so it says something the list
+            alone doesn't. */}
+        <span className="hidden items-center gap-1.5 normal-case tracking-normal xl:flex">
           <Users className="size-3.5" />
           {participants.length}
         </span>
