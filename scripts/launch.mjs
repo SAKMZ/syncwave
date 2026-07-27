@@ -321,8 +321,16 @@ if (share) {
       });
     });
 
+    // Hand it to the server so the room's Share button offers this instead of
+    // the localhost address the host happens to be browsing on.
+    const { setPublicUrl } = await import("../lib/publicurl.mjs");
+    await setPublicUrl(publicUrl);
+
     say(`  ${C.bold}${C.green}Share this link${C.reset}    ${C.cyan}${publicUrl}${C.reset}\n`);
-    say(`  ${C.dim}It is HTTPS, so "Install app" works on phones too.${C.reset}\n`);
+    say(
+      `  ${C.dim}Also offered by the Share button inside any room.${C.reset}\n` +
+        `  ${C.dim}It is HTTPS, so "Install app" works on phones too.${C.reset}\n`
+    );
   } catch (e) {
     try {
       tunnel?.kill();
@@ -342,6 +350,10 @@ const stop = () => {
   } catch {
     /* already gone */
   }
+  // The tunnel dies with us, so stop advertising its address.
+  import("../lib/publicurl.mjs")
+    .then((m) => m.clearPublicUrl())
+    .catch(() => {});
   server.kill();
 };
 process.on("SIGINT", stop);

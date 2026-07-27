@@ -9,6 +9,7 @@ import { registerRoomHandlers } from "./lib/rooms.mjs";
 import { handleAudioRequest, sweepCache } from "./lib/resolver.mjs";
 import { ffmpegMissing } from "./lib/ffmpeg.mjs";
 import { jsRuntimeMissing } from "./lib/jsruntime.mjs";
+import { clearPublicUrl } from "./lib/publicurl.mjs";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "3000", 10);
@@ -34,6 +35,11 @@ const io = new IOServer(server, {
   cors: { origin: publicUrl || true },
 });
 registerRoomHandlers(io);
+
+// Any tunnel from a previous run died with it. Drop the address now so nobody
+// is handed a dead link if that process was killed before it could clean up;
+// the launcher writes a fresh one once its tunnel is actually serving.
+clearPublicUrl();
 
 // Evict cache files not played within 72h — sweep at boot and hourly.
 sweepCache();

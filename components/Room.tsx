@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { io, type Socket } from "socket.io-client";
 import {
-  Link2,
   Users,
   MessageSquare,
   ListMusic,
@@ -23,6 +22,7 @@ import BottomPlayer from "@/components/BottomPlayer";
 import SearchPanel from "@/components/SearchPanel";
 import NowPlaying from "@/components/NowPlaying";
 import InstallButton, { InstallBanner } from "@/components/InstallButton";
+import ShareButton from "@/components/ShareButton";
 
 type Status = { state: "cached" | "downloading" | "pending"; percent: number };
 type Track = {
@@ -237,14 +237,6 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     }, 2500);
   };
 
-  const shareLink = typeof window !== "undefined" ? `${window.location.origin}/r/${code}` : "";
-  const [copied, setCopied] = useState(false);
-  const copyLink = () => {
-    navigator.clipboard?.writeText(shareLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
-
   const curDl = current ? dl[current.videoId] ?? null : null;
   const needVotes = Math.max(1, Math.ceil(participants.length / 2));
 
@@ -328,10 +320,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
           </span>
           <Participants list={participants} />
           <InstallButton />
-          <Button variant="outline" size="sm" onClick={copyLink} className="gap-1.5">
-            {copied ? <Check className="size-3.5" /> : <Link2 className="size-3.5" />}
-            <span className="hidden sm:inline">{copied ? "Copied" : "Share"}</span>
-          </Button>
+          <ShareButton code={code} />
         </div>
       </header>
 
@@ -468,6 +457,8 @@ function Participants({ list }: { list: Participant[] }) {
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
+        aria-label={`${list.length} listening`}
+        aria-expanded={open}
         className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-ink/80 transition-colors hover:bg-white/10"
       >
         <Users className="size-3.5" /> {list.length}
