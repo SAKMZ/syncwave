@@ -2,7 +2,7 @@
 
 # 🌊 Syncwave
 
-**Your own Spotify Jam — self-hosted, no accounts, no subscription.**
+**A self-hosted Spotify Jam alternative — no accounts, no Premium, no subscription.**
 
 Start a room, share one link, and listen with your friends **perfectly in sync** —
 shared queue, live chat, floating reactions, vote-to-skip, and an optional AI DJ.
@@ -16,7 +16,7 @@ Runs on any computer you already own.
 ![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker-2496ed.svg?logo=docker&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8.svg)
 
-![Syncwave — a room playing a track, with the now-playing panel, search, shared queue and live chat](docs/room.jpg)
+![Syncwave — a self-hosted Spotify Jam alternative: a room playing a track, with the now-playing panel, shared queue, live chat and two people listening in sync](docs/room-live.png)
 
 <sub><a href="docs/demo.gif">▶ See it in motion</a> — starting a room, searching, queueing a track, and playing it in sync.</sub>
 
@@ -34,6 +34,12 @@ all on a server you control.
 
 Think group DJ session: a house party, a long-distance movie-night-but-for-music,
 a study room, a Discord community's permanent hangout.
+
+**If you've looked for a Spotify Jam alternative**, or missed
+[JQBX](https://jqbx.fm), Vertigo, Turntable.fm or plug.dj, this is that idea
+without the account requirement, the Premium subscription, or somebody else's
+servers deciding when to shut it down. Nobody in the room needs to pay for
+anything, and nobody needs the same music service as you.
 
 ## Features
 
