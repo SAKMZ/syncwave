@@ -5,19 +5,20 @@ node_modules/
 
 # next.js
 .next/
-out/
-build/
+/out/
+/build/
 next-env.d.ts
 tsconfig.tsbuildinfo
 
 # private node copy the launcher fetches when the machine has none
 .runtime/
 
-# runtime
+# runtime — leading slash so these only match the dirs at the repo root, and not
+# route folders that happen to share the name (app/api/admin/cache/)
 .env
 .env.local
-cache/
-data/
+/cache/
+/data/
 *.log
 
 # reference material (not part of the project)
