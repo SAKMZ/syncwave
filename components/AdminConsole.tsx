@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Settings, ArrowLeft, LogOut, Cookie, Network } from "lucide-react";
+import { Settings, ArrowLeft, LogOut, Cookie, Network, HardDrive } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import CookiesPanel from "@/components/CookiesPanel";
 import ProxyPanel from "@/components/ProxyPanel";
+import StoragePanel from "@/components/StoragePanel";
 import AiDjSettings from "@/components/AiDjSettings";
 
 export default function AdminConsole() {
@@ -58,6 +59,14 @@ export default function AdminConsole() {
           <span className="ml-auto text-[11px] text-muted">for cloud hosts</span>
         </div>
         <ProxyPanel />
+      </section>
+
+      <section className="sw-glass mb-6 p-6">
+        <div className="mb-4 flex items-center gap-2">
+          <HardDrive className="size-4 text-accent-2" />
+          <h2 className="text-lg font-semibold text-ink">Storage</h2>
+        </div>
+        <StoragePanel />
       </section>
 
       <AiDjSettings />

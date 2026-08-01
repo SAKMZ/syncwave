@@ -218,6 +218,7 @@ Everything is optional — copy `.env.example` to `.env` to change any of it.
 | `PORT`               | Port to listen on (default `3000`).                                       |
 | `DATA_DIR`           | Rooms, settings, admin password, cookies (default `./data`).               |
 | `CACHE_DIR`          | Downloaded audio (default `./cache`).                                     |
+| `CACHE_MAX_MB`       | Disk cap for cached audio (default `4096`). Oldest evicted first, `0` = no cap. |
 | `FFMPEG_PATH`        | Path to a specific ffmpeg binary. Auto-detected otherwise.                |
 | `YTDLP_COOKIES_FILE` | Path to a `cookies.txt`. Takes precedence over an upload.                 |
 | `WEBSHARE_API_KEY`   | Fetches a proxy pool and refreshes it hourly. Also settable in `/admin`.   |
