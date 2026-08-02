@@ -140,7 +140,7 @@ function ChatPanel({
               /dj
             </button>
             <span>
-              ask {aiDj} for a track — <span className="text-ink-soft">/dj something moodier</span>
+              ask {aiDj} for a track — <span className="text-ink-soft">/dj add 5 romantic songs</span>
             </span>
           </div>
         )}
