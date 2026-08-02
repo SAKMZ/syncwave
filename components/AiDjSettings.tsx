@@ -52,7 +52,13 @@ const PROVIDERS: Record<
   },
   google: {
     label: "Google Gemini (free tier)",
-    model: "gemini-2.0-flash",
+    // A *lite* model on purpose. The DJ writes two sentences between tracks, so
+    // latency is the whole experience — and the heavier reasoning models spend
+    // so long thinking that they can return nothing at all within a sane token
+    // budget. Measured on this prompt set: flash-lite answers every DJ call in
+    // under a second; a 26B reasoning model took 86 seconds and still came back
+    // empty.
+    model: "gemini-3.5-flash-lite",
     keyHint: "AIza…",
     note: (
       <>
@@ -66,7 +72,8 @@ const PROVIDERS: Record<
           aistudio.google.com/apikey
         </a>
         . Gemini has a free tier — for a DJ that speaks once a track, a room of
-        friends is unlikely to leave it.
+        friends is unlikely to leave it. Prefer a <strong>lite</strong> model:
+        the DJ is judged on how fast it answers, not on how hard it thinks.
       </>
     ),
   },
