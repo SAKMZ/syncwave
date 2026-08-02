@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -22,6 +22,13 @@ type Settings = {
   aiDjEnabled: boolean;
   personaId: string;
   hasApiKey?: boolean;
+};
+type TestResult = {
+  ok: boolean;
+  provider?: string;
+  model?: string;
+  reply?: string;
+  error?: string;
 };
 
 const selectCls =
@@ -79,6 +86,8 @@ export default function AiDjSettings({
   const [apiKey, setApiKey] = useState("");
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [test, setTest] = useState<TestResult | null>(null);
 
   useEffect(() => {
     fetch("/api/settings")
@@ -120,9 +129,30 @@ export default function AiDjSettings({
       setApiKey("");
       setSaved(true);
       setTimeout(() => setSaved(false), 1800);
+      // Last result described the old settings; keeping it on screen next to
+      // new ones is worse than showing nothing.
+      setTest(null);
       onSaved?.();
     }
     setSaving(false);
+  }
+
+  /** Save first, then ask the model to say one word. */
+  async function runTest() {
+    setTesting(true);
+    setTest(null);
+    try {
+      await save();
+      const res = await fetch("/api/admin/dj-test", { method: "POST" });
+      setTest(
+        res.ok
+          ? await res.json()
+          : { ok: false, error: `The server refused the check (${res.status}).` }
+      );
+    } catch {
+      setTest({ ok: false, error: "Could not reach the server." });
+    }
+    setTesting(false);
   }
 
   return (
@@ -262,7 +292,7 @@ export default function AiDjSettings({
         </section>
       )}
 
-      <div>
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="accent" size="lg" onClick={save} disabled={saving} className="gap-1.5">
           {saving ? (
             <Loader2 className="size-4 animate-spin" />
@@ -271,7 +301,63 @@ export default function AiDjSettings({
           ) : null}
           {saved ? "Saved" : saving ? "Saving…" : saveLabel}
         </Button>
+
+        {/* The DJ is deliberately silent when it fails, so that a broken model
+            can never take playback down. The cost of that is no way to tell a
+            quiet DJ from a misconfigured one — this is it. */}
+        {s.aiDjEnabled && (
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={runTest}
+            disabled={testing || saving}
+            className="gap-1.5"
+          >
+            {testing ? <Loader2 className="size-4 animate-spin" /> : null}
+            {testing ? "Asking…" : "Test the DJ"}
+          </Button>
+        )}
       </div>
+
+      {test && (
+        <div
+          role="status"
+          className={cn(
+            "sw-card sw-fade-in flex gap-3 p-4 text-sm",
+            test.ok
+              ? "border-[color:color-mix(in_oklab,var(--success)_45%,transparent)]"
+              : "border-[color:color-mix(in_oklab,var(--destructive)_45%,transparent)]"
+          )}
+        >
+          {test.ok ? (
+            <Check className="mt-0.5 size-4 shrink-0 text-[var(--success)]" />
+          ) : (
+            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-[var(--destructive)]" />
+          )}
+          <div className="min-w-0">
+            <p className="font-semibold text-ink">
+              {test.ok ? "The DJ answered." : "The DJ could not answer."}
+            </p>
+            <p className="mt-1 break-words text-muted">
+              {test.ok ? (
+                <>
+                  <code className="font-mono text-ink-soft">{test.model}</code> on {test.provider}{" "}
+                  replied “{test.reply}”.
+                </>
+              ) : (
+                test.error
+              )}
+            </p>
+            {!test.ok && /model name format|not found|NOT_FOUND/i.test(test.error ?? "") && (
+              <p className="mt-2 text-xs text-muted">
+                Model IDs are lower-case and provider-specific — an Ollama model name won&rsquo;t
+                work on Gemini. Try <code className="font-mono text-ink-soft">{provider.model}</code>
+                .
+              </p>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
