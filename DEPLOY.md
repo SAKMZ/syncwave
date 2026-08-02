@@ -216,6 +216,70 @@ pool is exhausted or the key is wrong — [see the troubleshooting section](#if-
 
 ---
 
+## Keeping it up to date
+
+### By hand
+
+```bash
+cd /opt/syncwave           # wherever you installed it
+sudo git pull
+sudo docker compose up -d --build
+curl -fsS http://127.0.0.1:3000/api/health && echo OK
+```
+
+Your rooms, settings, admin password and cached audio live in `./data` and
+`./cache`. Nothing in an update touches either, and `.env` is left alone.
+
+### On a timer
+
+`scripts/self-update.sh` follows **releases**, not `main` — `main` is where work
+lands, a tag is where it has been decided the work is finished, and an
+unattended box should follow the second one. When there's a newer tag it
+records the current commit, checks out the tag, rebuilds, and polls
+`/api/health`; **if the app doesn't come back it puts the old commit back and
+rebuilds that**, because a box that half-updated at 4am is worse than one that
+didn't update at all.
+
+See what an update would do, without doing it:
+
+```bash
+sudo ./scripts/self-update.sh --check
+```
+
+Run it now:
+
+```bash
+sudo ./scripts/self-update.sh
+```
+
+Install the daily timer (04:00 local, spread over an hour, catches up after a
+reboot):
+
+```bash
+sudo cp scripts/systemd/syncwave-update.* /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now syncwave-update.timer
+```
+
+Check on it:
+
+```bash
+systemctl list-timers syncwave-update.timer
+journalctl -u syncwave-update -n 50
+```
+
+The unit files assume `/opt/apps/syncwave`; edit `WorkingDirectory` and
+`ExecStart` if you installed elsewhere. To stop auto-updating:
+`sudo systemctl disable --now syncwave-update.timer`.
+
+> **Should you turn this on?** If the instance is a permanent room for other
+> people, yes — security fixes reach you without you thinking about it. If
+> you've modified the checkout, no: the script does a hard checkout of the tag
+> and your changes will be overwritten. Keep changes in `.env` and
+> `docker-compose.override.yml`, which are never touched.
+
+---
+
 ## First run — claim your instance
 
 The first time you open Syncwave it sends you to **`/setup`** to create an admin

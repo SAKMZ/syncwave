@@ -1,0 +1,19 @@
+[Unit]
+Description=Update Syncwave to the newest release
+Documentation=https://github.com/SAKMZ/syncwave/blob/main/DEPLOY.md
+# Docker has to be up before there is anything to rebuild.
+Requires=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+# Adjust if you installed somewhere else.
+WorkingDirectory=/opt/apps/syncwave
+Environment=HEALTH_URL=http://127.0.0.1:3000/api/health
+ExecStart=/opt/apps/syncwave/scripts/self-update.sh
+# A build plus a health wait; the script has its own 300s health timeout, and
+# this is the outer bound in case a docker pull stalls.
+TimeoutStartSec=45min
+# Output goes to the journal: journalctl -u syncwave-update
+StandardOutput=journal
+StandardError=journal

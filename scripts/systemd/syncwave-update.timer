@@ -1,0 +1,16 @@
+[Unit]
+Description=Check for a new Syncwave release daily
+
+[Timer]
+# 04:00 local time. The rebuild takes the app down for a minute or two, so it
+# wants to be at the hour a listening room is least likely to be in use.
+OnCalendar=*-*-* 04:00:00
+# Spread across an hour, because a fleet of self-hosted boxes all pulling from
+# GitHub at exactly 04:00 is a self-inflicted thundering herd.
+RandomizedDelaySec=1h
+# If the machine was asleep or off at 04:00, run on the next boot rather than
+# silently skipping a release.
+Persistent=true
+
+[Install]
+WantedBy=timers.target
