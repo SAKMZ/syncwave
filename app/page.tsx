@@ -148,7 +148,7 @@ export default function Home() {
                 <span className="size-2.5 rounded-full bg-white/15" aria-hidden />
                 <span className="size-2.5 rounded-full bg-white/15" aria-hidden />
                 <span className="ml-3 truncate rounded-full bg-white/[0.04] px-3 py-1 font-mono text-[10px] text-muted">
-                  /r/J94XE7
+                  /r/XNB8MW
                 </span>
               </div>
               {/* Plain <img>: the file is a fixed asset shipped with the app, so
@@ -159,12 +159,13 @@ export default function Home() {
                 src="/room.webp"
                 width={1600}
                 height={808}
-                alt="A Syncwave room: album art and a waveform in the Now Playing panel, a shared queue with vote and like buttons, recommendations, a live activity feed, chat, and a bottom player with reactions"
+                alt='A Syncwave room tinted green by the album art. A listener has typed "/dj add 10 romantic songs" and the AI DJ has queued ten tracks and introduced the first one. The shared queue shows each track with who added it, beside DJ recommendations, a live activity feed and a bottom player with reactions'
                 className="w-full rounded-md"
               />
             </div>
             <figcaption className="mt-4 text-center text-xs text-muted">
-              The room adopts the dominant colour of whatever is playing.
+              One line of chat, ten tracks queued — and the room takes its colour from whatever
+              is playing.
             </figcaption>
           </figure>
         </section>

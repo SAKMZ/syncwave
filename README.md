@@ -18,7 +18,7 @@ history, and an optional AI DJ. Runs on any computer you already own.
 ![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker-2496ed.svg?logo=docker&logoColor=white)
 ![PWA](https://img.shields.io/badge/PWA-installable-5a0fc8.svg)
 
-![Syncwave, a self-hosted Spotify Jam alternative: a listening room in a dark purple interface, with a Now Playing hero showing album art and a waveform, a shared queue with vote and like buttons, recommendations, a live activity feed, chat, and a bottom player with reactions](docs/room-live.png)
+![Syncwave, a self-hosted Spotify Jam alternative: a listening room tinted green by the album art, where a listener has typed "/dj add 10 romantic songs" and the AI DJ has queued ten tracks and introduced the first one. The shared queue shows each track with who added it, alongside DJ recommendations, a live activity feed and a bottom player with reactions](docs/room-live.png)
 
 </div>
 
