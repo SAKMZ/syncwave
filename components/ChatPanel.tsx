@@ -28,6 +28,7 @@ function ChatPanel({
   chat,
   you,
   aiDj,
+  djTyping,
   onSend,
   onTyping,
   statuses,
@@ -39,6 +40,8 @@ function ChatPanel({
   /** Your own nickname, so your messages can sit on the other side. */
   you: string;
   aiDj: string | null;
+  /** The DJ is composing. It has no seat, so the server reports this for it. */
+  djTyping?: boolean;
   onSend: (text: string) => void;
   /** Fires as you write, so the room can show you're mid-sentence. */
   onTyping?: () => void;
@@ -65,6 +68,11 @@ function ChatPanel({
   // the activity feed. What's left is people talking.
   const thread = chat.filter((m) => !m.system);
   const hasConversation = thread.length > 0;
+
+  // Who is mid-sentence. Yourself excluded: you know.
+  const typists = Object.entries(statuses ?? {})
+    .filter(([nick, status]) => status === "typing" && nick !== you)
+    .map(([nick]) => nick);
 
   return (
     <div className={cn("flex min-h-0 flex-col", className)}>
@@ -105,6 +113,10 @@ function ChatPanel({
             />
           );
         })}
+
+        {djTyping && aiDj && <TypingRow names={[aiDj]} dj />}
+        {typists.length > 0 && <TypingRow names={typists} />}
+
         <div ref={endRef} />
       </div>
 
@@ -186,6 +198,52 @@ function ChatPanel({
           >
             <Send className="size-3.5" />
           </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * "Rahin is typing…", as a bubble rather than a status line.
+ *
+ * It sits in the thread where the message will land, so the eye is already in
+ * the right place when it arrives, and it takes the same avatar and bubble
+ * shapes as everything else — a typing indicator that looks nothing like a
+ * message is a worse promise about what's coming.
+ */
+function TypingRow({ names, dj = false }: { names: string[]; dj?: boolean }) {
+  const label =
+    names.length === 1
+      ? `${names[0]} is typing`
+      : names.length === 2
+        ? `${names[0]} and ${names[1]} are typing`
+        : `${names[0]} and ${names.length - 1} others are typing`;
+
+  return (
+    <div className="sw-fade-in mt-3 flex items-end gap-2" aria-live="polite" aria-atomic="true">
+      {dj ? (
+        <span
+          className="grid size-6 shrink-0 place-items-center rounded-full bg-[image:var(--accent-gradient)] text-[11px]"
+          aria-hidden
+        >
+          🎧
+        </span>
+      ) : (
+        <Avatar name={names[0]} size="sm" status="typing" />
+      )}
+      <div className="flex min-w-0 flex-col">
+        <span className="mb-1 px-1 text-[11px] font-semibold" style={{ color: dj ? "var(--accent-2)" : nickColor(names[0]) }}>
+          {label}
+        </span>
+        {/* The dots are decoration; the label above already carries the whole
+            meaning, and a screen reader that gets both announces it twice. */}
+        <div className={cn("sw-bubble w-fit py-2.5", dj && "sw-bubble-dj")} aria-hidden>
+          <span className="sw-typing text-ink-soft">
+            <span />
+            <span />
+            <span />
+          </span>
         </div>
       </div>
     </div>

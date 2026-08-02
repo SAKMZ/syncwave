@@ -607,6 +607,27 @@ video {
    this back to `auto`, where an instant jump is the correct behaviour. */
 html { scroll-behavior: smooth; }
 
+/* Three dots, walking. The classic, because it is instantly legible and
+   nothing else in the app means "hold on, words are coming". */
+@keyframes sw-typing-dot {
+  0%, 60%, 100% { opacity: 0.25; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
+}
+.sw-typing {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+.sw-typing > span {
+  width: 5px;
+  height: 5px;
+  border-radius: 999px;
+  background: currentColor;
+  animation: sw-typing-dot 1.2s var(--ease) infinite;
+}
+.sw-typing > span:nth-child(2) { animation-delay: 160ms; }
+.sw-typing > span:nth-child(3) { animation-delay: 320ms; }
+
 /* Brand mark. `scaleY` about the bar's own centre, so the bars grow both ways
    from the middle line and stay a compositor-only animation. `fill-box` is what
    makes `transform-origin: center` mean the rect rather than the whole SVG. */
@@ -917,6 +938,7 @@ html { scroll-behavior: smooth; }
   .sw-aurora,
   .sw-spin,
   .sw-logo-bars rect,
+  .sw-typing > span,
   .sw-eq > span,
   .sw-wave-playing > span,
   .sw-float,
@@ -930,6 +952,9 @@ html { scroll-behavior: smooth; }
     animation: none !important;
   }
   .sw-eq > span { height: 8px; }
+  /* Without the animation the dots rest at their faded keyframe, which is
+     almost invisible — and the whole point of them is to be noticed. */
+  .sw-typing > span { opacity: 0.8; }
   .sw-rise,
   .sw-pop-in,
   .sw-art-in { opacity: 1; transform: none; }

@@ -90,6 +90,8 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [stats, setStats] = useState<RoomStats | null>(null);
   const [mood, setMood] = useState<Mood | null>(null);
+  // The DJ has no socket of its own, so the server reports this on its behalf.
+  const [djTyping, setDjTyping] = useState(false);
   const [reactionLog, setReactionLog] = useState<ReactionEvent[]>([]);
   const [lastReaction, setLastReaction] = useState<IncomingReaction | null>(null);
   const [skipVotes, setSkipVotes] = useState(0);
@@ -198,6 +200,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     socket.on(EVENTS.HISTORY_UPDATE, (s: { history: HistoryEntry[] }) => setHistory(s.history));
     socket.on(EVENTS.STATS_UPDATE, (s: { stats: RoomStats }) => setStats(s.stats));
     socket.on(EVENTS.MOOD_UPDATE, (s: { mood: Mood }) => setMood(s.mood));
+    socket.on(EVENTS.DJ_TYPING, (s: { typing: boolean }) => setDjTyping(s.typing));
     socket.on(EVENTS.PLAYBACK_UPDATE, (s: any) => applyPlayback(s));
     socket.on(EVENTS.CHAT_NEW, (m: ChatMsg) => {
       setChat((c) => [...c.slice(-199), m]);
@@ -689,6 +692,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
               chat={chat}
               you={nick.trim()}
               aiDj={aiDj}
+              djTyping={djTyping}
               onSend={sendChat}
               onTyping={onTyping}
               statuses={statuses}
