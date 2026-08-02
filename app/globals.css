@@ -153,7 +153,12 @@ body {
   min-height: 100%;
   width: 100%;
   max-width: 100%;
-  overflow-x: hidden;
+  /* Deliberately NOT `overflow-x: hidden`. Any non-visible overflow makes an
+     element a scroll container, and a `position: sticky` child then sticks to
+     *that* box rather than to the viewport — which, on a page that scrolls the
+     document, means it doesn't stick at all. The clamp above on <html> already
+     stops the shrink-to-fit this was guarding against, and it does it at the
+     viewport, where sticky still resolves. */
   background: transparent;
   color: var(--ink);
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -598,6 +603,24 @@ video {
 }
 
 /* Spinning disc for the artwork while playing. */
+/* In-page links glide rather than jump. The reduced-motion block below puts
+   this back to `auto`, where an instant jump is the correct behaviour. */
+html { scroll-behavior: smooth; }
+
+/* Brand mark. `scaleY` about the bar's own centre, so the bars grow both ways
+   from the middle line and stay a compositor-only animation. `fill-box` is what
+   makes `transform-origin: center` mean the rect rather than the whole SVG. */
+@keyframes sw-logo-bar {
+  from { transform: scaleY(0.42); }
+  to { transform: scaleY(1); }
+}
+.sw-logo-bars rect {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sw-logo-bar 900ms var(--ease) infinite alternate;
+  animation-delay: var(--sw-logo-delay, 0ms);
+}
+
 @keyframes sw-spin { to { transform: rotate(360deg); } }
 .sw-spin { animation: sw-spin 8s linear infinite; }
 .sw-spin.paused { animation-play-state: paused; }
@@ -893,6 +916,7 @@ video {
 @media (prefers-reduced-motion: reduce) {
   .sw-aurora,
   .sw-spin,
+  .sw-logo-bars rect,
   .sw-eq > span,
   .sw-wave-playing > span,
   .sw-float,

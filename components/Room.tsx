@@ -47,6 +47,7 @@ import ActivityFeed from "@/components/ActivityFeed";
 import ChatPanel from "@/components/ChatPanel";
 import Reactions, { type IncomingReaction } from "@/components/Reactions";
 import MoodBadge from "@/components/MoodBadge";
+import Logo from "@/components/Logo";
 
 /**
  * Three surfaces nobody sees on arrival: two are behind a tab, one behind a
@@ -478,9 +479,9 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
           than sliding behind it on a short window. */}
       <header className="z-50 flex shrink-0 items-center gap-4 border-b border-white/8 px-4 py-3 backdrop-blur-xl">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="grid size-10 shrink-0 place-items-center rounded-sm bg-[image:linear-gradient(135deg,var(--art-1),var(--art-2))] text-sm font-black text-white shadow-[0_6px_20px_-8px_var(--art-1)]">
-            ♪
-          </div>
+          {/* Same mark as the landing page and the favicon, tinted by the
+              artwork like everything else in the room. */}
+          <Logo size="md" tint="art" animated={isPlaying} />
           <div className="min-w-0">
             <div className="flex min-w-0 items-center gap-2">
               <h1 className="truncate font-display text-base font-bold leading-tight text-ink sm:text-lg">
