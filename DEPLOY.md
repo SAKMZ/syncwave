@@ -397,4 +397,7 @@ Everything is optional. Copy `.env.example` to `.env` to change any of it.
 | `YTDLP_PROXY` | A single proxy, always tried first. Works alone, or alongside a pool. |
 
 The **AI DJ** (provider, model, API key, persona) is configured at runtime in
-the **`/admin`** console — no restart, no rebuild.
+the **`/admin`** console — no restart, no rebuild. Providers: a local **Ollama**
+(no key), **Google Gemini** (free key from
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey)), **OpenAI** or
+**Anthropic**. Leave it off and nothing else changes.

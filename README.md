@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🌊 Syncwave
+<img src="docs/logo.png" width="88" height="88" alt="" />
+
+# Syncwave
 
 **A self-hosted Spotify Jam alternative — listen to music together, in perfect sync, with no accounts and no Premium.**
 
@@ -97,7 +99,8 @@ anything, and nobody needs the same music service as you.
   (the DJ's pick, or more from the current artist) rather than asking you to
   trust an unexplained list.
 - 🤖 **Optional AI DJ** — an opt-in host with swappable LLM providers
-  (OpenAI / Anthropic / local Ollama) and **six personas**: Late Night FM, Vinyl
+  (**Google Gemini**, which has a free tier, OpenAI, Anthropic, or a local
+  Ollama with no key at all) and **six personas**: Late Night FM, Vinyl
   Collector, Lo-Fi Host, Indie Explorer, Synthwave Radio and Jazz Lounge. It
   introduces tracks in character and takes requests with `/dj <what you want>` in
   chat. Taste and voice are kept separate on purpose — ask the Jazz Lounge host
@@ -326,6 +329,13 @@ a real player rather than a bot's text commands.
 No. It's off by default and everything else works without it — Syncwave never
 calls an LLM provider until you configure one yourself, and the key stays on
 your instance.
+
+**Do I have to pay for the AI DJ?**
+No. Pick **Ollama** and it runs on your own machine with no key at all, or
+**Google Gemini** and use a free key from
+[aistudio.google.com/apikey](https://aistudio.google.com/apikey) — the DJ speaks
+about once a track, so a room of friends is unlikely to leave the free tier.
+OpenAI and Anthropic are there if you already pay for one.
 
 **Where does the music come from?**
 YouTube Music, fetched with yt-dlp and cached on your disk. See *Legal* below.
