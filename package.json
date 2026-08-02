@@ -1,8 +1,22 @@
 {
   "name": "syncwave",
-  "version": "0.5.0",
+  "version": "0.7.0",
   "private": true,
-  "description": "Syncwave — self-hosted, AI-powered collaborative listening rooms. A local alternative to Spotify Jam.",
+  "description": "Syncwave — a self-hosted Spotify Jam alternative. Listening rooms with a shared queue, synced playback, chat, reactions and an optional AI DJ.",
+  "keywords": [
+    "spotify-jam-alternative",
+    "listen-together",
+    "synced-playback",
+    "listening-room",
+    "shared-queue",
+    "self-hosted",
+    "music",
+    "socket-io",
+    "nextjs",
+    "pwa"
+  ],
+  "homepage": "https://github.com/SAKMZ/syncwave",
+  "repository": { "type": "git", "url": "https://github.com/SAKMZ/syncwave.git" },
   "license": "MIT",
   "type": "module",
   "engines": {
