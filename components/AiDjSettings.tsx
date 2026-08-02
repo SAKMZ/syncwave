@@ -27,6 +27,46 @@ type Settings = {
 const selectCls =
   "w-full rounded-md border border-input bg-field px-3 py-2 text-sm text-ink focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-none";
 
+/**
+ * What each provider needs, and where to get it.
+ *
+ * A key field labelled "sk-…" is a small lie for three of these four, and
+ * "which model string does this one want" is the question that actually stops
+ * people — so both come from here rather than being hard-coded to OpenAI.
+ */
+const PROVIDERS: Record<
+  string,
+  { label: string; model: string; keyHint?: string; note?: React.ReactNode }
+> = {
+  ollama: {
+    label: "Ollama (local, no key)",
+    model: "llama3.1",
+    note: "Runs on this machine. Nothing leaves it, and there is nothing to pay for.",
+  },
+  google: {
+    label: "Google Gemini (free tier)",
+    model: "gemini-2.0-flash",
+    keyHint: "AIza…",
+    note: (
+      <>
+        Create a key at{" "}
+        <a
+          href="https://aistudio.google.com/apikey"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-accent-2 underline-offset-4 hover:underline"
+        >
+          aistudio.google.com/apikey
+        </a>
+        . Gemini has a free tier — for a DJ that speaks once a track, a room of
+        friends is unlikely to leave it.
+      </>
+    ),
+  },
+  openai: { label: "OpenAI", model: "gpt-4o-mini", keyHint: "sk-…" },
+  anthropic: { label: "Anthropic", model: "claude-haiku-4-5", keyHint: "sk-ant-…" },
+};
+
 export default function AiDjSettings({
   saveLabel = "Save settings",
   onSaved,
@@ -54,6 +94,9 @@ export default function AiDjSettings({
   if (!s) return <p className="text-sm text-muted">Loading…</p>;
 
   const set = (patch: Partial<Settings>) => setS({ ...s, ...patch });
+  // An instance configured before a provider existed, or by hand in .env, can
+  // hold a name this build doesn't know. Fall back rather than crash on it.
+  const provider = PROVIDERS[s.llmProvider] ?? PROVIDERS.openai;
 
   async function save() {
     if (!s) return;
@@ -162,19 +205,33 @@ export default function AiDjSettings({
               <select
                 className={selectCls}
                 value={s.llmProvider}
-                onChange={(e) => set({ llmProvider: e.target.value })}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  // Carry the model across only if it was never set for the old
+                  // provider; "llama3.1" sent to Gemini is a confusing 404.
+                  const wasDefault = Object.values(PROVIDERS).some((p) => p.model === s.llmModel);
+                  set({
+                    llmProvider: next,
+                    llmModel: wasDefault || !s.llmModel ? PROVIDERS[next].model : s.llmModel,
+                  });
+                }}
               >
-                <option value="ollama">Ollama (local)</option>
-                <option value="openai">OpenAI</option>
-                <option value="anthropic">Anthropic</option>
+                {Object.entries(PROVIDERS).map(([id, p]) => (
+                  <option key={id} value={id}>
+                    {p.label}
+                  </option>
+                ))}
               </select>
+              {provider.note && (
+                <p className="mt-2 text-xs leading-relaxed text-muted">{provider.note}</p>
+              )}
             </div>
             <div>
               <Label className="mb-1.5 block">Model</Label>
               <Input
                 value={s.llmModel}
                 onChange={(e) => set({ llmModel: e.target.value })}
-                placeholder="e.g. llama3.1 / gpt-4o-mini / claude-haiku-4-5"
+                placeholder={provider.model}
               />
             </div>
             {s.llmProvider === "ollama" ? (
@@ -195,7 +252,9 @@ export default function AiDjSettings({
                   type="password"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
-                  placeholder={s.hasApiKey ? "•••••••• (leave blank to keep)" : "sk-…"}
+                  placeholder={
+                    s.hasApiKey ? "•••••••• (leave blank to keep)" : provider.keyHint
+                  }
                 />
               </div>
             )}
