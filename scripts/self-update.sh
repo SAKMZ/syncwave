@@ -53,17 +53,29 @@ cd "$DIR" || die "no such directory: $DIR"
 # should work anywhere, including on the machine you develop on.
 [ "$MODE" = "check" ] || command -v docker >/dev/null 2>&1 || die "docker is not installed"
 
+# Every git call goes through this.
+#
+# The install is usually owned by the user who cloned it while the updater runs
+# as root, which trips git's dubious-ownership guard. Doing it per-invocation
+# rather than with `git config --global --add safe.directory` keeps the
+# exception scoped to this one directory instead of writing a permanent
+# exemption into whatever config file happens to be in reach — and under
+# systemd there is no HOME, so that config would not be read anyway. That last
+# part is the trap: the same command works by hand under `sudo` and fails from
+# a timer, which is a horrible thing to debug at 4am.
+GIT=(git -c "safe.directory=$DIR")
+
 # ------------------------------------------------------------------ what's new
-git fetch --tags --quiet origin || die "could not reach the remote"
+"${GIT[@]}" fetch --tags --quiet origin || die "git fetch failed (see the error above)"
 
 # Newest tag by version, not by date: a patch to an older line can be tagged
 # after a newer minor, and creation order would then walk the box backwards.
-LATEST="$(git tag -l 'v*' --sort=-v:refname | head -1)"
+LATEST="$("${GIT[@]}" tag -l 'v*' --sort=-v:refname | head -1)"
 [ -n "$LATEST" ] || die "no release tags found"
 
-CURRENT_COMMIT="$(git rev-parse HEAD)"
-LATEST_COMMIT="$(git rev-parse "${LATEST}^{commit}")"
-CURRENT_NAME="$(git describe --tags --always 2>/dev/null || echo "$CURRENT_COMMIT")"
+CURRENT_COMMIT="$("${GIT[@]}" rev-parse HEAD)"
+LATEST_COMMIT="$("${GIT[@]}" rev-parse "${LATEST}^{commit}")"
+CURRENT_NAME="$("${GIT[@]}" describe --tags --always 2>/dev/null || echo "$CURRENT_COMMIT")"
 
 if [ "$CURRENT_COMMIT" = "$LATEST_COMMIT" ] && [ "$MODE" != "force" ]; then
   log "already on $LATEST — nothing to do"
@@ -72,7 +84,7 @@ fi
 
 if [ "$MODE" = "check" ]; then
   log "update available: $CURRENT_NAME -> $LATEST"
-  git log --oneline "${CURRENT_COMMIT}..${LATEST_COMMIT}" | sed 's/^/    /'
+  "${GIT[@]}" log --oneline "${CURRENT_COMMIT}..${LATEST_COMMIT}" | sed 's/^/    /'
   exit 0
 fi
 
@@ -81,11 +93,11 @@ log "updating $CURRENT_NAME -> $LATEST"
 # ------------------------------------------------------------------- the build
 # Detached at the tag on purpose. A box that follows releases has no use for a
 # branch, and this makes "what is deployed" a single unambiguous answer.
-git checkout --quiet --force "$LATEST" || die "could not check out $LATEST"
+"${GIT[@]}" checkout --quiet --force "$LATEST" || die "could not check out $LATEST"
 
 if ! docker compose up -d --build; then
   log "build failed — rolling back to $CURRENT_NAME"
-  git checkout --quiet --force "$CURRENT_COMMIT"
+  "${GIT[@]}" checkout --quiet --force "$CURRENT_COMMIT"
   docker compose up -d --build || log "rollback build also failed — the app may be down"
   exit 1
 fi
@@ -97,7 +109,7 @@ until curl -fsS --max-time 5 "$HEALTH_URL" >/dev/null 2>&1; do
   if [ "$(date +%s)" -ge "$deadline" ]; then
     log "health check never passed — rolling back to $CURRENT_NAME"
     docker compose logs --tail 40 || true
-    git checkout --quiet --force "$CURRENT_COMMIT"
+    "${GIT[@]}" checkout --quiet --force "$CURRENT_COMMIT"
     docker compose up -d --build || log "rollback build also failed — the app may be down"
     exit 1
   fi

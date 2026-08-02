@@ -10,6 +10,10 @@ Type=oneshot
 # Adjust if you installed somewhere else.
 WorkingDirectory=/opt/apps/syncwave
 Environment=HEALTH_URL=http://127.0.0.1:3000/api/health
+# systemd starts services with no HOME. git tolerates that, but anything else
+# that quietly expects a home directory (a docker credential helper, say) does
+# not, and the failure looks like a network problem.
+Environment=HOME=/root
 ExecStart=/opt/apps/syncwave/scripts/self-update.sh
 # A build plus a health wait; the script has its own 300s health timeout, and
 # this is the outer bound in case a docker pull stalls.
