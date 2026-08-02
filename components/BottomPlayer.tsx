@@ -2,28 +2,22 @@
 
 import { useState } from "react";
 import {
-  Play,
+  Heart,
+  Loader2,
   Pause,
-  SkipForward,
-  Shuffle,
+  Play,
   Repeat,
   Repeat1,
-  Loader2,
-  Disc3,
+  Shuffle,
+  SkipForward,
   Volume1,
   Volume2,
   VolumeX,
 } from "lucide-react";
 import { REACTIONS } from "@/lib/protocol.mjs";
 import { cn } from "@/lib/cn";
-
-type Track = {
-  videoId: string;
-  title: string;
-  artist: string;
-  duration: number;
-  thumbnail?: string;
-} | null;
+import type { Repeat as RepeatMode, Track } from "@/lib/types";
+import { CountButton, Cover } from "@/components/ui/track-row";
 
 function fmt(s: number) {
   if (!Number.isFinite(s) || s < 0) s = 0;
@@ -46,6 +40,9 @@ export default function BottomPlayer({
   skipVotes,
   needVotes,
   volume,
+  likes,
+  liked,
+  onLike,
   onVolume,
   onPlayPause,
   onSkip,
@@ -55,7 +52,7 @@ export default function BottomPlayer({
   onRepeat,
   onReact,
 }: {
-  current: Track;
+  current: Track | null;
   isPlaying: boolean;
   position: number;
   duration: number;
@@ -64,10 +61,13 @@ export default function BottomPlayer({
   buffering: boolean;
   preparing: boolean;
   shuffle: boolean;
-  repeat: "off" | "one" | "all";
+  repeat: RepeatMode;
   skipVotes: number;
   needVotes: number;
   volume: number;
+  likes: number;
+  liked: boolean;
+  onLike: () => void;
   onVolume: (v: number) => void;
   onPlayPause: () => void;
   onSkip: () => void;
@@ -99,25 +99,37 @@ export default function BottomPlayer({
       : current?.artist;
 
   return (
-    <footer className="relative z-40 shrink-0 border-t border-white/10 bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-2xl">
-      <div className="mx-auto grid max-w-7xl grid-cols-[1fr_auto] items-center gap-x-3 gap-y-1.5 px-3 py-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-4 md:px-5 md:py-3">
+    <footer className="relative z-40 shrink-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-2xl">
+      {/* A hairline of the current track's colour across the whole bar — the
+          quietest possible way to tie the player to what is playing. */}
+      <div
+        className="absolute inset-x-0 top-0 h-px opacity-70"
+        style={{ background: "linear-gradient(90deg, transparent, var(--art-1), var(--art-2), transparent)" }}
+        aria-hidden
+      />
+
+      {/* Tighter on a phone: the bar is two rows there, and every pixel it
+          takes comes out of the panel above it. */}
+      <div className="mx-auto grid max-w-[1600px] grid-cols-[1fr_auto] items-center gap-x-4 gap-y-1 px-4 py-2 md:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] md:gap-6 md:px-6 md:py-3">
         {/* ── left: track identity ── */}
         <div className="flex min-w-0 items-center gap-3">
-          <div className="relative size-11 shrink-0 overflow-hidden rounded-xl border border-white/10 sm:size-14">
-            {current?.thumbnail ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={current.thumbnail} alt="" className="size-full object-cover" />
-            ) : (
-              <div className="grid size-full place-items-center bg-white/5">
-                <Disc3 className="size-5 text-muted" />
-              </div>
-            )}
+          <Cover src={current?.thumbnail} size="md" className="sm:size-14">
             {loading && (
               <div className="absolute inset-0 grid place-items-center bg-black/60">
                 <Loader2 className="size-5 animate-spin text-white" />
               </div>
             )}
-          </div>
+            {isPlaying && !loading && (
+              <div className="absolute inset-x-0 bottom-0 grid h-5 place-items-center bg-gradient-to-t from-black/75 to-transparent">
+                <span className="sw-eq h-2.5" aria-hidden>
+                  <span />
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              </div>
+            )}
+          </Cover>
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold text-ink">
               {current ? current.title : "Nothing playing"}
@@ -125,17 +137,27 @@ export default function BottomPlayer({
             <div
               className={cn(
                 "truncate text-xs",
-                preparing || buffering ? "text-accent-2" : "text-muted"
+                preparing || buffering ? "text-[var(--accent-2)]" : "text-muted"
               )}
             >
               {status ?? "Add a song to start"}
             </div>
           </div>
+          {current && (
+            <CountButton
+              icon={<Heart className={cn("size-3.5", liked && "fill-current")} />}
+              count={likes}
+              active={liked}
+              tone="pink"
+              label={liked ? "Unlike this track" : "Like this track"}
+              onClick={onLike}
+            />
+          )}
         </div>
 
         {/* ── centre: transport + scrubber ── */}
-        <div className="order-3 col-span-2 flex flex-col items-center gap-0.5 md:order-none md:col-span-1 md:w-[min(46vw,520px)] md:gap-1">
-          <div className="flex items-center gap-1 sm:gap-2">
+        <div className="order-3 col-span-2 flex flex-col items-center gap-1 md:order-none md:col-span-1 md:w-[min(46vw,560px)] md:gap-2">
+          <div className="flex items-center gap-2 sm:gap-3">
             <IconToggle active={shuffle} disabled={!isHost} onClick={onShuffle} label="Shuffle">
               <Shuffle className="size-4" />
             </IconToggle>
@@ -144,7 +166,14 @@ export default function BottomPlayer({
               <button
                 onClick={onPlayPause}
                 disabled={preparing || !current}
-                className="grid size-11 place-items-center rounded-full bg-white text-[#0b0b12] shadow-[0_4px_18px_-4px_rgba(255,255,255,0.45)] transition-transform hover:scale-105 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
+                className={cn(
+                  "grid size-11 place-items-center rounded-full text-white md:size-12",
+                  "bg-[image:linear-gradient(135deg,var(--art-1),var(--art-2))]",
+                  "shadow-[0_8px_28px_-8px_var(--art-1)]",
+                  "transition-[transform,box-shadow,opacity] duration-200 ease-[var(--ease)]",
+                  "hover:scale-105 hover:shadow-[0_10px_36px_-8px_var(--art-1)] active:scale-95",
+                  "disabled:opacity-30 disabled:hover:scale-100"
+                )}
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? (
@@ -157,12 +186,12 @@ export default function BottomPlayer({
               <button
                 onClick={onVoteSkip}
                 disabled={!current}
-                className="flex h-11 items-center gap-2 rounded-full border border-white/15 px-4 text-sm font-semibold text-ink/85 transition-colors hover:bg-white/10 disabled:opacity-30"
+                className="flex h-11 items-center gap-2 rounded-full border border-white/15 px-5 md:h-12 text-sm font-semibold text-ink/85 transition-[background-color,border-color,transform] duration-200 ease-[var(--ease)] hover:-translate-y-px hover:bg-white/10 active:translate-y-0 disabled:opacity-30"
                 aria-label="Vote to skip"
                 title="Vote to skip this track"
               >
                 <SkipForward className="size-4" />
-                <span className="font-mono text-xs">
+                <span className="font-mono text-xs tabular-nums">
                   {skipVotes}/{needVotes}
                 </span>
               </button>
@@ -172,7 +201,7 @@ export default function BottomPlayer({
               <button
                 onClick={onSkip}
                 disabled={!current}
-                className="grid size-9 place-items-center rounded-full text-ink/70 transition-colors hover:bg-white/10 hover:text-ink disabled:opacity-30"
+                className="grid size-9 place-items-center rounded-full text-ink/70 transition-[background-color,color,transform] duration-200 ease-[var(--ease)] hover:bg-white/10 hover:text-ink active:scale-95 disabled:opacity-30"
                 aria-label="Next track"
                 title="Next track"
               >
@@ -198,7 +227,7 @@ export default function BottomPlayer({
 
           {/* Scrubber. Shows download progress while the track is still caching,
               which is why the room isn't playing yet. */}
-          <div className="flex w-full items-center gap-2">
+          <div className="flex w-full items-center gap-3">
             <span className="w-9 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted">
               {fmt(position)}
             </span>
@@ -229,24 +258,14 @@ export default function BottomPlayer({
           </div>
         </div>
 
-        {/* ── right: volume, plus reactions where there's room for them ── */}
-        <div className="flex items-center justify-end gap-1">
+        {/* ── right: reactions and volume ── */}
+        <div className="flex items-center justify-end gap-2">
+          <ReactionBar onReact={onReact} className="hidden lg:flex" />
+          <span className="hidden h-6 w-px bg-white/8 lg:block" aria-hidden />
           <Volume volume={volume} onVolume={onVolume} />
-          <ReactionBar onReact={onReact} className="hidden md:flex" />
         </div>
-
       </div>
 
-      {/* On a phone the reactions float just above the bar instead of sitting
-          inside it. A row within the grid made the player 172px tall, which
-          pushed the room's own content underneath it — this costs no layout
-          height at all. */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2 md:hidden">
-        <ReactionBar
-          onReact={onReact}
-          className="pointer-events-auto rounded-full border border-white/10 bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] px-1 py-0.5 shadow-[0_6px_20px_-6px_rgba(0,0,0,0.7)] backdrop-blur-xl"
-        />
-      </div>
     </footer>
   );
 }
@@ -255,8 +274,12 @@ export default function BottomPlayer({
  * Reactions, always visible. They used to live behind a smiley: tap to open,
  * tap to react, popover closes — so cheering three times cost six taps and the
  * moment had passed. One tap is the whole interaction now.
+ *
+ * Exported because on a phone it is rendered outside the player, floating just
+ * above the tab bar: both belong in the same band of screen the thumb can
+ * actually reach without the hand moving.
  */
-function ReactionBar({
+export function ReactionBar({
   onReact,
   className,
 }: {
@@ -265,15 +288,15 @@ function ReactionBar({
 }) {
   return (
     <div className={cn("flex items-center gap-0.5", className)}>
-      {REACTIONS.map((e: string) => (
+      {REACTIONS.map(({ emoji, label }: { emoji: string; label: string }) => (
         <button
-          key={e}
-          onClick={() => onReact(e)}
-          className="grid size-8 shrink-0 place-items-center rounded-full text-base transition-transform hover:scale-125 hover:bg-white/10 active:scale-90"
-          aria-label={`React ${e}`}
-          title={`React ${e}`}
+          key={emoji}
+          onClick={() => onReact(emoji)}
+          className="grid size-8 shrink-0 place-items-center rounded-full text-base transition-[transform,background-color] duration-200 ease-[var(--ease)] hover:scale-125 hover:bg-white/10 active:scale-90"
+          aria-label={label}
+          title={label}
         >
-          {e}
+          {emoji}
         </button>
       ))}
     </div>
@@ -301,10 +324,10 @@ function Volume({ volume, onVolume }: { volume: number; onVolume: (v: number) =>
   const Icon = muted ? VolumeX : volume < 0.5 ? Volume1 : Volume2;
 
   return (
-    <div className="hidden items-center gap-1.5 sm:flex">
+    <div className="hidden items-center gap-2 sm:flex">
       <button
         onClick={toggle}
-        className="grid size-9 place-items-center rounded-full text-ink/65 transition-colors hover:bg-white/10 hover:text-ink"
+        className="grid size-9 place-items-center rounded-full text-ink/65 transition-[background-color,color] duration-200 ease-[var(--ease)] hover:bg-white/10 hover:text-ink"
         aria-label={muted ? "Unmute" : "Mute"}
         title={muted ? "Unmute" : "Mute"}
       >
@@ -347,8 +370,10 @@ function IconToggle({
       title={label}
       aria-pressed={active}
       className={cn(
-        "relative grid size-9 place-items-center rounded-full transition-colors disabled:opacity-25",
-        active ? "text-[var(--accent-2)] hover:bg-white/10" : "text-ink/60 hover:bg-white/10 hover:text-ink"
+        "relative grid size-9 place-items-center rounded-full transition-[background-color,color,transform] duration-200 ease-[var(--ease)] active:scale-95 disabled:opacity-25",
+        active
+          ? "text-[var(--accent-2)] hover:bg-white/10"
+          : "text-ink/60 hover:bg-white/10 hover:text-ink"
       )}
     >
       {children}

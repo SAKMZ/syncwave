@@ -104,7 +104,7 @@ export default function SetupWizard() {
             </p>
           </div>
 
-          <div className="rounded-xl border border-[color-mix(in_oklab,var(--accent)_35%,transparent)] bg-accent-soft p-4 text-sm text-muted">
+          <div className="rounded-sm border border-[color-mix(in_oklab,var(--accent)_35%,transparent)] bg-accent-soft p-4 text-sm text-muted">
             Do this now. Until a password is set, anyone who reaches this server
             can claim it.
           </div>
@@ -131,7 +131,7 @@ export default function SetupWizard() {
           </div>
 
           {error && (
-            <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+            <p className="rounded-sm border border-[color-mix(in_oklab,var(--destructive)_35%,transparent)] bg-[color-mix(in_oklab,var(--destructive)_12%,transparent)] px-4 py-3 text-sm text-[var(--destructive)]">
               {error}
             </p>
           )}

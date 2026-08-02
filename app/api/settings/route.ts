@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPublicSettings, updateSettings } from "@/lib/settings.mjs";
-import { PERSONAS } from "@/lib/personas.mjs";
+import { publicPersonas } from "@/lib/personas.mjs";
 import { resetProxyCache } from "@/lib/proxies.mjs";
 import { requireAdmin } from "@/lib/guard";
 
@@ -11,7 +11,9 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   const denied = await requireAdmin();
   if (denied) return denied;
-  return NextResponse.json({ settings: getPublicSettings(), personas: PERSONAS });
+  // The prompt and taste text stay server-side: they are the persona's
+  // instructions, not its description, and the browser has no use for them.
+  return NextResponse.json({ settings: getPublicSettings(), personas: publicPersonas() });
 }
 
 export async function POST(req: NextRequest) {

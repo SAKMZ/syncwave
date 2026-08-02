@@ -88,7 +88,7 @@ export default function StoragePanel() {
             </span>
           </span>
           {capped && (
-            <span className={cn("text-xs", tight ? "text-[#ffcf8b]" : "text-muted")}>
+            <span className={cn("text-xs", tight ? "text-[var(--warning)]" : "text-muted")}>
               limit {fmt(stats.limitBytes)}
             </span>
           )}
@@ -98,7 +98,7 @@ export default function StoragePanel() {
             <div
               className={cn(
                 "h-full rounded-full transition-[width]",
-                tight ? "bg-[#ffcf8b]" : "bg-gradient-to-r from-[var(--accent)] to-[var(--accent-3)]"
+                tight ? "bg-[var(--warning)]" : "bg-gradient-to-r from-[var(--accent)] to-[var(--accent-3)]"
               )}
               style={{ width: `${Math.max(pct, stats.bytes > 0 ? 2 : 0)}%` }}
             />
@@ -126,12 +126,12 @@ export default function StoragePanel() {
       </p>
 
       {note && (
-        <p className="flex items-center gap-1.5 text-sm text-[#7ee787]">
+        <p className="flex items-center gap-1.5 text-sm text-[var(--success)]">
           <Check className="size-4" /> {note}
         </p>
       )}
       {error && (
-        <p className="flex items-center gap-1.5 text-sm text-[#ff8b8b]">
+        <p className="flex items-center gap-1.5 text-sm text-[var(--destructive)]">
           <TriangleAlert className="size-4" /> {error}
         </p>
       )}

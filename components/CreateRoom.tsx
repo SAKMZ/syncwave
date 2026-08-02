@@ -91,7 +91,7 @@ export default function CreateRoom() {
       </div>
 
       {error && (
-        <p className="max-w-sm text-center text-sm text-[#ff8ba7]" role="alert">
+        <p className="max-w-sm text-center text-sm text-[var(--destructive)]" role="alert">
           {error}
         </p>
       )}

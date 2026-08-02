@@ -71,13 +71,13 @@ export default function ShareButton({ code }: { code: string }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="sw-fade-in absolute right-0 top-11 z-50 w-[min(22rem,calc(100vw-1.5rem))] rounded-2xl border border-white/10 bg-[var(--popover)] p-4 shadow-xl">
+          <div className="sw-fade-in absolute right-0 top-11 z-50 w-[min(22rem,calc(100vw-1.5rem))] rounded-md border border-white/10 bg-[var(--popover)] p-4 shadow-xl">
             <div className="sw-label mb-3">
               {reachable ? <Globe className="size-3.5" /> : <Wifi className="size-3.5" />}
               {reachable ? "Anyone can join with this" : "Local network only"}
             </div>
 
-            <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] p-2">
+            <div className="flex items-center gap-2 rounded-sm border border-white/10 bg-white/[0.04] p-2">
               <input
                 readOnly
                 value={link}
@@ -91,7 +91,7 @@ export default function ShareButton({ code }: { code: string }) {
               </Button>
             </div>
 
-            <p className={cn("mt-3 text-xs", reachable ? "text-muted" : "text-[#ffcf8b]")}>
+            <p className={cn("mt-3 text-xs", reachable ? "text-muted" : "text-[var(--warning)]")}>
               {reachable ? (
                 <>
                   Send this to anyone — they don&rsquo;t need an account, and the room code is{" "}

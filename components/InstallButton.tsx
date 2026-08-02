@@ -59,7 +59,7 @@ export default function InstallButton() {
           await deferred.userChoice;
           setDeferred(null);
         }}
-        className="flex items-center gap-1.5 rounded-full bg-gradient-to-br from-[var(--accent)] to-[#6b3ff0] px-3.5 py-1.5 text-xs font-semibold text-white shadow-[0_6px_20px_-6px_var(--accent)] transition-transform hover:scale-105"
+        className="flex items-center gap-1.5 rounded-full bg-[image:var(--accent-gradient)] px-3.5 py-1.5 text-xs font-semibold text-white shadow-[var(--glow-accent)] transition-transform duration-200 ease-[var(--ease)] hover:scale-105"
       >
         <Download className="size-3.5" /> Install
       </button>
@@ -111,7 +111,7 @@ export function InstallBanner({ code }: { code: string }) {
             setDeferred(null);
             close();
           }}
-          className="flex shrink-0 items-center gap-1.5 rounded-full bg-gradient-to-br from-[var(--accent)] to-[#6b3ff0] px-4 py-2 text-sm font-semibold text-white shadow-[0_6px_20px_-6px_var(--accent)] transition-transform hover:scale-105"
+          className="flex shrink-0 items-center gap-1.5 rounded-full bg-[image:var(--accent-gradient)] px-4 py-2 text-sm font-semibold text-white shadow-[var(--glow-accent)] transition-transform duration-200 ease-[var(--ease)] hover:scale-105"
         >
           <Download className="size-4" /> Install app
         </button>
@@ -140,7 +140,7 @@ export function InstallBanner({ code }: { code: string }) {
   if (!body) return null;
 
   return (
-    <div className="flex items-center gap-3 rounded-2xl border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-4 py-3 backdrop-blur">
+    <div className="flex items-center gap-3 rounded-md border border-[var(--accent)]/25 bg-[var(--accent)]/10 px-4 py-3 backdrop-blur">
       <div className="flex flex-1 flex-wrap items-center justify-between gap-3">{body}</div>
       <button
         onClick={close}

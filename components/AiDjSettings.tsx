@@ -6,8 +6,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/cn";
 
-type Persona = { id: string; name: string; tagline: string };
+type Persona = {
+  id: string;
+  name: string;
+  avatar: string;
+  tagline: string;
+  description: string;
+};
 type Settings = {
   llmProvider: string;
   llmModel: string;
@@ -93,23 +100,54 @@ export default function AiDjSettings({
         </div>
 
         {s.aiDjEnabled && (
-          <div className="mt-5">
-            <Label className="mb-1.5 block">Persona</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {personas.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => set({ personaId: p.id })}
-                  className={`rounded-md border p-3 text-left transition-colors ${
-                    s.personaId === p.id
-                      ? "border-[var(--accent)] bg-accent-soft"
-                      : "border-soft-border hover:bg-white/5"
-                  }`}
-                >
-                  <div className="text-sm font-semibold text-ink">{p.name}</div>
-                  <div className="text-xs text-muted">{p.tagline}</div>
-                </button>
-              ))}
+          <div className="mt-6">
+            <Label className="mb-1 block">Persona</Label>
+            <p className="mb-3 text-xs text-muted">
+              Shapes how it talks between tracks and what it reaches for when the room asks it
+              for something. An explicit request is always played as asked.
+            </p>
+            <div
+              role="radiogroup"
+              aria-label="AI DJ persona"
+              className="grid gap-2 sm:grid-cols-2"
+            >
+              {personas.map((p) => {
+                const selected = s.personaId === p.id;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => set({ personaId: p.id })}
+                    className={cn(
+                      "sw-card sw-focus flex gap-3 p-3 text-left",
+                      selected
+                        ? "border-[color:color-mix(in_oklab,var(--accent)_55%,transparent)] bg-accent-soft shadow-[var(--glow-accent)]"
+                        : "sw-card-hover"
+                    )}
+                  >
+                    <span
+                      className="grid size-9 shrink-0 place-items-center rounded-full border border-white/10 bg-white/[0.04] text-base"
+                      aria-hidden
+                    >
+                      {p.avatar}
+                    </span>
+                    <span className="min-w-0">
+                      <span className="flex items-center gap-1.5">
+                        <span className="truncate text-sm font-semibold text-ink">{p.name}</span>
+                        {selected && (
+                          <Check className="size-3.5 shrink-0 text-[var(--accent-2)]" />
+                        )}
+                      </span>
+                      <span className="mt-0.5 block text-xs text-muted">{p.tagline}</span>
+                      <span className="mt-1.5 block text-xs leading-relaxed text-ink-soft/70">
+                        {p.description}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

@@ -1,47 +1,76 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { io, type Socket } from "socket.io-client";
 import {
-  Users,
-  MessageSquare,
+  Activity as ActivityIcon,
+  BarChart3,
+  History as HistoryIcon,
+  Keyboard,
   ListMusic,
-  Check,
-  Loader2,
-  Clock,
+  MessageSquare,
   Play,
   Radio,
   Search as SearchIcon,
-  X,
+  Users,
 } from "lucide-react";
 import { EVENTS } from "@/lib/protocol.mjs";
 import { cn } from "@/lib/cn";
+import type {
+  ChatMsg,
+  HistoryEntry,
+  Mood,
+  Participant,
+  PresenceStatus,
+  ReactionEvent,
+  Repeat,
+  RoomStats,
+  Track,
+} from "@/lib/types";
+import { useArtworkTheme } from "@/hooks/useArtworkTheme";
+import { usePresence } from "@/hooks/usePresence";
+import { useShortcuts } from "@/hooks/useShortcuts";
+import { useSwipe } from "@/hooks/useSwipe";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import BottomPlayer from "@/components/BottomPlayer";
+import { Avatar, AvatarStack } from "@/components/ui/avatar";
+import { Panel } from "@/components/ui/panel";
+import { Popover } from "@/components/ui/popover";
+import { Skeleton } from "@/components/ui/skeleton";
+import BottomPlayer, { ReactionBar } from "@/components/BottomPlayer";
 import SearchPanel from "@/components/SearchPanel";
 import NowPlaying from "@/components/NowPlaying";
+import QueuePanel from "@/components/QueuePanel";
+import Recommendations from "@/components/Recommendations";
+import ActivityFeed from "@/components/ActivityFeed";
+import ChatPanel from "@/components/ChatPanel";
+import Reactions, { type IncomingReaction } from "@/components/Reactions";
+import MoodBadge from "@/components/MoodBadge";
+
+/**
+ * Three surfaces nobody sees on arrival: two are behind a tab, one behind a
+ * keypress. Splitting them out keeps the room's first load to what the room
+ * actually opens with — and the dialog drags a whole modal library with it.
+ */
+const HistoryPanel = dynamic(() => import("@/components/HistoryPanel"), {
+  loading: () => <PanelLoading label="Loading history…" />,
+});
+const StatsPanel = dynamic(() => import("@/components/StatsPanel"), {
+  loading: () => <PanelLoading label="Counting up…" />,
+});
+const ShortcutsDialog = dynamic(() => import("@/components/ShortcutsDialog"));
+import { PresenceCard } from "@/components/PresenceCard";
 import InstallButton, { InstallBanner } from "@/components/InstallButton";
 import ShareButton from "@/components/ShareButton";
 import MadeWithLove from "@/components/MadeWithLove";
 
-type Status = { state: "cached" | "downloading" | "pending"; percent: number };
-type Track = {
-  id?: string;
-  videoId: string;
-  title: string;
-  artist: string;
-  duration: number;
-  thumbnail?: string;
-  /** Larger cover for the now-playing panel. Absent on pre-existing rooms. */
-  art?: string;
-  addedBy?: string;
-  status?: Status;
-};
-type Participant = { id: string; nick: string; isHost: boolean };
-type ChatMsg = { id: string; ts: number; nick?: string; text: string; system?: boolean; dj?: boolean };
-type Repeat = "off" | "one" | "all";
 type Tab = "now" | "queue" | "search" | "chat";
+const TAB_ORDER: Tab[] = ["now", "queue", "search", "chat"];
+/** The centre column carries three lists; they share one segmented control. */
+type CenterView = "queue" | "history" | "stats";
+/** The right column carries two surfaces; on a phone they take turns. */
+type SidePane = "chat" | "activity";
 
 export default function Room({ code, asHost }: { code: string; asHost: boolean }) {
   const [nick, setNick] = useState("");
@@ -57,6 +86,11 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   const [queue, setQueue] = useState<Track[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [chat, setChat] = useState<ChatMsg[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [stats, setStats] = useState<RoomStats | null>(null);
+  const [mood, setMood] = useState<Mood | null>(null);
+  const [reactionLog, setReactionLog] = useState<ReactionEvent[]>([]);
+  const [lastReaction, setLastReaction] = useState<IncomingReaction | null>(null);
   const [skipVotes, setSkipVotes] = useState(0);
   const [buffering, setBuffering] = useState(false);
   const [preparing, setPreparing] = useState(false);
@@ -64,19 +98,12 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   const [shuffle, setShuffle] = useState(false);
   const [repeat, setRepeat] = useState<Repeat>("off");
   const [dl, setDl] = useState<Record<string, number>>({});
-  const [floats, setFloats] = useState<
-    {
-      id: string;
-      emoji: string;
-      left: number;
-      delay: number;
-      drift: number;
-      scale: number;
-      spin: number;
-    }[]
-  >([]);
   const [tab, setTab] = useState<Tab>("now");
+  const [center, setCenter] = useState<CenterView>("queue");
+  const [pane, setPane] = useState<SidePane>("chat");
   const [unread, setUnread] = useState(0);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [searchSignal, setSearchSignal] = useState(0);
   // Local per-listener volume — everyone controls their own, unlike playback.
   const [volume, setVolume] = useState(1);
 
@@ -87,6 +114,20 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
 
   const isHost = you != null && participants.find((p) => p.id === you)?.isHost === true;
   const serverNow = () => Date.now() + offsetRef.current;
+
+  // The whole room takes its colour from the current cover.
+  useArtworkTheme(current?.art || current?.thumbnail);
+
+  const emit = useCallback(
+    (ev: string, payload?: unknown) => socketRef.current?.emit(ev, payload),
+    []
+  );
+
+  // Presence: what this listener is doing, reported and deduplicated.
+  const signal = usePresence(
+    useCallback((status: PresenceStatus) => emit(EVENTS.PRESENCE_SET, { status }), [emit]),
+    joined
+  );
 
   useEffect(() => {
     const saved = typeof window !== "undefined" ? localStorage.getItem("sw_nick") : "";
@@ -104,10 +145,10 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume, current?.videoId]);
 
-  const changeVolume = (v: number) => {
+  const changeVolume = useCallback((v: number) => {
     setVolume(v);
     localStorage.setItem("sw_volume", String(v));
-  };
+  }, []);
 
   function applyPlayback(s: any) {
     playbackRef.current = {
@@ -144,36 +185,34 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       setQueue(s.queue);
       setParticipants(s.participants);
       setChat(s.chat || []);
+      setHistory(s.history || []);
+      setStats(s.stats ?? null);
+      setMood(s.mood ?? null);
       applyPlayback(s);
     });
     socket.on(EVENTS.QUEUE_UPDATE, (s: { queue: Track[] }) => setQueue(s.queue));
     socket.on(EVENTS.PARTICIPANTS_UPDATE, (s: { participants: Participant[] }) =>
       setParticipants(s.participants)
     );
+    socket.on(EVENTS.HISTORY_UPDATE, (s: { history: HistoryEntry[] }) => setHistory(s.history));
+    socket.on(EVENTS.STATS_UPDATE, (s: { stats: RoomStats }) => setStats(s.stats));
+    socket.on(EVENTS.MOOD_UPDATE, (s: { mood: Mood }) => setMood(s.mood));
     socket.on(EVENTS.PLAYBACK_UPDATE, (s: any) => applyPlayback(s));
     socket.on(EVENTS.CHAT_NEW, (m: ChatMsg) => {
       setChat((c) => [...c.slice(-199), m]);
       if (!m.system) setUnread((u) => u + 1);
     });
-    socket.on(EVENTS.REACTION_NEW, ({ id, emoji }: { id: string; emoji: string }) => {
-      // One tap should read as a cheer, not a single balloon. The server still
-      // sends one event; each client blooms it into a small burst, so the
-      // celebration costs nothing extra on the wire and everyone sees one.
-      const n = 4 + Math.floor(Math.random() * 3); // 4–6
-      const burst = Array.from({ length: n }, (_, i) => ({
-        id: `${id}-${i}`,
-        emoji,
-        left: 8 + Math.random() * 84,
-        delay: Math.round(i * 70 + Math.random() * 70),
-        drift: Math.round((Math.random() - 0.5) * 90),
-        scale: 0.75 + Math.random() * 0.6,
-        spin: Math.round((Math.random() - 0.5) * 50),
-      }));
-      setFloats((cur) => [...cur, ...burst]);
-      const ids = new Set(burst.map((b) => b.id));
-      // Longest delay plus the animation, with a little slack.
-      setTimeout(() => setFloats((cur) => cur.filter((x) => !ids.has(x.id))), 3400);
-    });
+    socket.on(
+      EVENTS.REACTION_NEW,
+      ({ id, emoji, nick: from }: { id: string; emoji: string; nick?: string }) => {
+        // The burst itself is drawn by <Reactions>, seeded from this id so
+        // every client in the room renders the identical one.
+        setLastReaction({ id, emoji });
+        // The feed keeps a short tail of them. Bounded because reactions are
+        // the one event that can arrive several times a second.
+        setReactionLog((l) => [...l.slice(-39), { id, emoji, nick: from, ts: Date.now() }]);
+      }
+    );
     socket.on(EVENTS.DOWNLOAD_PROGRESS, ({ videoId, percent }: { videoId: string; percent: number }) =>
       setDl((d) => ({ ...d, [videoId]: percent }))
     );
@@ -205,8 +244,8 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
 
   // clear the chat badge when the chat tab is open
   useEffect(() => {
-    if (tab === "chat") setUnread(0);
-  }, [tab, chat]);
+    if (tab === "chat" && pane === "chat") setUnread(0);
+  }, [tab, pane, chat]);
 
   // audio sync loop — only runs once the server says the track is ready.
   const retryRef = useRef(0);
@@ -248,7 +287,6 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     audio.play().then(() => setNeedsGesture(false)).catch(() => {});
   };
 
-  const emit = (ev: string, payload?: any) => socketRef.current?.emit(ev, payload);
   const onEnded = () => {
     if (isHost && current) emit(EVENTS.TRACK_ENDED, { videoId: current.videoId });
   };
@@ -262,18 +300,123 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     }, 2500);
   };
 
-  const curDl = current ? dl[current.videoId] ?? null : null;
+  const curDl = current ? (dl[current.videoId] ?? null) : null;
   const needVotes = Math.max(1, Math.ceil(participants.length / 2));
+
+  /* ------------------------------------------------------------- actions */
+
+  const addTrack = useCallback(
+    (track: Track) => {
+      emit(EVENTS.QUEUE_ADD, { track });
+      signal("queueing");
+    },
+    [emit, signal]
+  );
+  const likeTrack = useCallback((id: string) => emit(EVENTS.QUEUE_LIKE, { id }), [emit]);
+  const voteTrack = useCallback(
+    (id: string) => {
+      emit(EVENTS.QUEUE_VOTE, { id });
+      signal("voting");
+    },
+    [emit, signal]
+  );
+  const reorderTrack = useCallback(
+    (id: string, toIndex: number) => emit(EVENTS.QUEUE_REORDER, { id, toIndex }),
+    [emit]
+  );
+  const removeTrack = useCallback((id: string) => emit(EVENTS.QUEUE_REMOVE, { id }), [emit]);
+  const seekTo = useCallback((pos: number) => emit(EVENTS.CONTROL_SEEK, { position: pos }), [emit]);
+  const voteSkip = useCallback(() => {
+    emit(EVENTS.VOTE_SKIP);
+    signal("voting");
+  }, [emit, signal]);
+  const sendChat = useCallback((text: string) => emit(EVENTS.CHAT_SEND, { text }), [emit]);
+  const react = useCallback((emoji: string) => emit(EVENTS.REACTION, { emoji }), [emit]);
+  const onTyping = useCallback(() => signal("typing"), [signal]);
+  const likeCurrent = useCallback(() => {
+    if (current?.id) likeTrack(current.id);
+  }, [current?.id, likeTrack]);
+
+  const openSearch = useCallback(() => {
+    setTab("search");
+    setSearchSignal((n) => n + 1);
+    signal("queueing");
+  }, [signal]);
+
+  /* ----------------------------------------------------------- shortcuts */
+
+  useShortcuts({
+    playpause: () => isHost && emit(EVENTS.CONTROL_PLAYPAUSE),
+    next: () => isHost && emit(EVENTS.CONTROL_SKIP),
+    prev: () => isHost && seekTo(Math.max(0, position - 10)),
+    search: openSearch,
+    queue: () => {
+      setTab("queue");
+      setCenter("queue");
+    },
+    history: () => {
+      setTab("queue");
+      setCenter("history");
+    },
+    chat: () => {
+      setTab("chat");
+      setPane("chat");
+    },
+    like: () => current?.id && likeTrack(current.id),
+    mute: () => changeVolume(volume === 0 ? 1 : 0),
+    help: () => setHelpOpen((v) => !v),
+    close: () => setHelpOpen(false),
+  });
+
+  const swipe = useSwipe(
+    useCallback((dir: 1 | -1) => {
+      setTab((t) => {
+        const i = TAB_ORDER.indexOf(t);
+        return TAB_ORDER[Math.min(TAB_ORDER.length - 1, Math.max(0, i + dir))];
+      });
+    }, [])
+  );
+
+  /* -------------------------------------------------------------- derived */
+
+  // Anything already in the room should never be offered back as a suggestion
+  // or as an un-added search result.
+  const roomIds = useMemo(() => {
+    const ids = new Set(queue.map((t) => t.videoId));
+    if (current) ids.add(current.videoId);
+    return ids;
+  }, [queue, current]);
+
+  const statuses = useMemo(
+    () => Object.fromEntries(participants.map((p) => [p.nick, p.status])),
+    [participants]
+  );
+
+  const currentLikes = current?.likes ?? [];
+  const youLikeCurrent = currentLikes.includes(nick.trim());
 
   if (!joined) {
     return (
       <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col items-center justify-center px-6">
-        <div className="w-full sw-glass p-6 text-center sm:p-8">
-          <div className="mb-1 text-[11px] font-semibold tracking-eyebrow text-accent-2 uppercase">
+        <Panel className="w-full text-center">
+          <div className="mb-2 text-[11px] font-semibold tracking-eyebrow text-[var(--accent-2)] uppercase">
             Syncwave
           </div>
           <h1 className="mb-1 font-display text-2xl font-bold text-ink">{roomName}</h1>
           <p className="mb-6 text-sm text-muted">Pick a name to join the jam.</p>
+
+          {/* A first look at the avatar this name gets — the same one that will
+              sit beside every track you queue and every line you type. */}
+          <div className="mb-6 grid h-14 place-items-center">
+            {nick.trim() ? (
+              <Avatar name={nick.trim()} size="lg" className="sw-pop-in size-14 text-lg" />
+            ) : (
+              <span className="grid size-14 place-items-center rounded-full border border-dashed border-white/15 text-muted">
+                <Users className="size-5" />
+              </span>
+            )}
+          </div>
+
           <Input
             className="mb-3 text-center"
             placeholder="your name"
@@ -282,11 +425,15 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
             onChange={(e) => setNick(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && doJoin()}
           />
-          <Button variant="accent" className="w-full" onClick={doJoin} disabled={!nick.trim()}>
+          <Button variant="primary" className="w-full" onClick={doJoin} disabled={!nick.trim()}>
             {asHost ? "Start the room" : "Join"}
           </Button>
-          {error && <p className="mt-3 text-sm text-[var(--destructive)]">{error}</p>}
-        </div>
+          {error && (
+            <p role="alert" className="mt-3 text-sm text-[var(--destructive)]">
+              {error}
+            </p>
+          )}
+        </Panel>
         <MadeWithLove className="mt-8 text-center" />
       </main>
     );
@@ -302,64 +449,89 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       />
       <audio ref={audioRef} onEnded={onEnded} onError={onAudioError} />
 
-      {/* floating emoji reactions */}
-      <div className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
-        {floats.map((f) => (
-          <span
-            key={f.id}
-            className="sw-float absolute bottom-24 text-4xl"
-            style={
-              {
-                left: `${f.left}%`,
-                "--sw-f-delay": `${f.delay}ms`,
-                "--sw-f-drift": `${f.drift}px`,
-                "--sw-f-scale": f.scale,
-                "--sw-f-spin": `${f.spin}deg`,
-              } as React.CSSProperties
-            }
-          >
-            {f.emoji}
-          </span>
-        ))}
-      </div>
+      <Reactions incoming={lastReaction} />
+      {helpOpen && <ShortcutsDialog open onOpenChange={setHelpOpen} isHost={isHost} />}
+
+      {/* The one thing a screen reader must not have to go looking for: what
+          the room is playing. Polite, so it waits for a gap rather than
+          interrupting, and keyed on the track so it fires once per change. */}
+      <p aria-live="polite" className="sr-only">
+        {current
+          ? `Now playing: ${current.title} by ${current.artist}${
+              current.addedBy ? `, added by ${current.addedBy}` : ""
+            }`
+          : "Nothing playing"}
+      </p>
 
       {/* autoplay blocked (mobile) — a tap satisfies the gesture requirement */}
       {needsGesture && current && !preparing && (
         <button
           onClick={resumeAudio}
-          className="fixed inset-x-0 bottom-24 z-[60] mx-auto flex w-max items-center gap-2 rounded-full bg-gradient-to-br from-[var(--accent)] to-[#6b3ff0] px-5 py-3 text-sm font-semibold text-white shadow-[0_10px_30px_-6px_var(--accent)] animate-pulse"
+          className="fixed inset-x-0 bottom-24 z-[60] mx-auto flex w-max items-center gap-2 rounded-full bg-[image:var(--accent-gradient)] px-5 py-3 text-sm font-semibold text-white shadow-[var(--glow-accent)] animate-pulse"
         >
           <Play className="size-4" /> Tap to start audio
         </button>
       )}
 
-      {/* ── top nav: room identity + actions (non-interactive info lives here) ── */}
-      <header className="z-30 flex shrink-0 items-center justify-between gap-2 border-b border-white/8 px-3 py-2.5 backdrop-blur-xl sm:px-4">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-[var(--accent)] to-[var(--accent-3)] text-sm font-black text-white">
+      {/* ── top bar: identity, mood, search, presence ── */}
+      {/* z-50 so the search dropdown clears the bottom player (z-40) rather
+          than sliding behind it on a short window. */}
+      <header className="z-50 flex shrink-0 items-center gap-4 border-b border-white/8 px-4 py-3 backdrop-blur-xl">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid size-10 shrink-0 place-items-center rounded-sm bg-[image:linear-gradient(135deg,var(--art-1),var(--art-2))] text-sm font-black text-white shadow-[0_6px_20px_-8px_var(--art-1)]">
             ♪
           </div>
           <div className="min-w-0">
-            <h1 className="truncate font-display text-base font-bold leading-tight text-ink sm:text-lg">
-              {roomName}
-            </h1>
-            <div className="truncate text-[10px] font-semibold tracking-eyebrow text-accent-2 uppercase">
-              Syncwave{aiDj ? ` · DJ ${aiDj}` : ""}
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate font-display text-base font-bold leading-tight text-ink sm:text-lg">
+                {roomName}
+              </h1>
+              <span className="hidden sm:block">
+                <MoodBadge mood={mood} />
+              </span>
+            </div>
+            <div className="truncate text-[10px] font-semibold tracking-eyebrow text-[var(--accent-2)] uppercase">
+              Syncwave room{aiDj ? ` · DJ ${aiDj}` : ""}
             </div>
           </div>
         </div>
-        <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+
+        {/* Search floats over the layout rather than taking a column from it —
+            it is used in bursts, and the queue deserves the space the rest of
+            the time. */}
+        <SearchPanel
+          onAdd={addTrack}
+          queuedIds={roomIds}
+          variant="overlay"
+          shortcut
+          openSignal={searchSignal}
+          className="mx-auto hidden w-full max-w-xl md:block"
+        />
+
+        <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
           {/* Room code, spelled out for reading aloud across a room. */}
-          <span className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 sm:flex">
+          <span className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 lg:flex">
             <span className="text-[10px] font-semibold tracking-eyebrow text-muted uppercase">
               Code
             </span>
             <span className="font-mono text-xs font-bold tracking-[0.18em] text-ink">{code}</span>
           </span>
-          {/* Redundant on xl, where Now Playing lists these people in full. */}
-          <span className="xl:hidden">
-            <Participants list={participants} />
-          </span>
+
+          {participants.length > 0 && (
+            <ParticipantsMenu list={participants} statuses={statuses} />
+          )}
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setHelpOpen(true)}
+            aria-label="Keyboard shortcuts"
+            title="Keyboard shortcuts (?)"
+            className="hidden lg:inline-flex"
+          >
+            <Keyboard className="size-4" />
+          </Button>
+
           {/* The banner below says the same thing with room to explain why, so
               only one of the two is ever on screen: banner on phones, where
               installing actually matters, this button on desktop. */}
@@ -371,15 +543,12 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       </header>
 
       {/* ── body ── */}
-      <main className="relative flex min-h-0 flex-1 flex-col">
-        <div className="shrink-0 px-3 pt-3 md:hidden">
-          <TabBar tab={tab} setTab={setTab} queueCount={queue.length} unread={unread} />
-        </div>
-        {/* The extra bottom padding on phones is the reaction pill's safe area:
-            it floats over this region, and without the gap it sits on top of
+      <main className="relative flex min-h-0 flex-1 flex-col" {...swipe}>
+        {/* The bottom padding on phones is the reaction pill's safe area: it
+            floats over this region, and without the gap it sits on top of
             whatever the panel ends with. */}
-        <div className="mx-auto flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-3 px-3 pb-14 pt-3 sm:px-4 sm:pt-4 md:grid md:h-full md:grid-cols-[minmax(0,1fr)_340px] md:gap-4 md:pb-4 xl:grid-cols-[300px_minmax(0,1fr)_360px]">
-          {/* now playing — its own mobile tab, a dedicated column on wide screens */}
+        <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 pb-8 pt-4 md:grid md:h-full md:grid-cols-[minmax(0,1fr)_360px] md:pb-4 xl:grid-cols-[340px_minmax(0,1fr)_380px]">
+          {/* ── column 1: the hero ── */}
           <NowPlaying
             current={current}
             isPlaying={isPlaying}
@@ -387,49 +556,168 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
             cachePct={curDl ?? 0}
             buffering={buffering}
             participants={participants}
+            position={position}
+            likes={currentLikes}
+            liked={youLikeCurrent}
+            onLike={likeCurrent}
+            canSeek={isHost && !preparing && (current?.duration ?? 0) > 0}
+            onSeek={seekTo}
             className={cn(
               tab === "now" ? "flex flex-1" : "hidden",
               "md:hidden xl:flex xl:h-full xl:flex-initial"
             )}
           />
 
-          {/* search + queue */}
+          {/* ── column 2: what the room is about to hear, and what it has ── */}
           <div
             className={cn(
-              "min-h-0 flex-1 flex-col gap-3",
+              "min-h-0 flex-1 flex-col gap-4",
               tab === "queue" || tab === "search" ? "flex" : "hidden",
               "md:flex md:h-full md:flex-initial"
             )}
           >
-            <SearchPanel
-              onAdd={(track) => {
-                emit(EVENTS.QUEUE_ADD, { track });
-              }}
-              className={cn(tab === "search" ? "flex flex-1" : "hidden", "md:flex md:flex-none")}
-            />
-            <QueuePanel
-              queue={queue}
-              dl={dl}
-              isHost={isHost}
-              onRemove={(id) => emit(EVENTS.QUEUE_REMOVE, { id })}
-              onOpenSearch={() => setTab("search")}
-              className={cn(tab === "queue" ? "flex flex-1" : "hidden", "md:flex md:min-h-0 md:flex-1")}
-            />
+            {/* Phone only: the Add tab. On desktop this lives in the top bar. */}
+            <Panel className={cn(tab === "search" ? "flex flex-1" : "hidden", "md:hidden")}>
+              <SearchPanel
+                onAdd={addTrack}
+                queuedIds={roomIds}
+                variant="panel"
+                openSignal={searchSignal}
+                className="min-h-0 flex-1"
+              />
+            </Panel>
+
+            <Panel
+              className={cn(
+                tab === "queue" ? "flex" : "hidden",
+                "md:flex",
+                // An empty queue has nothing to scroll, so it gives its height
+                // to the suggestions underneath rather than sitting on it.
+                center !== "queue" || queue.length > 0 ? "min-h-0 flex-1" : "shrink-0"
+              )}
+            >
+              <CenterTabs
+                view={center}
+                setView={setCenter}
+                queueCount={queue.length}
+                historyCount={history.length}
+              />
+
+              {center === "queue" && (
+                <QueuePanel
+                  queue={queue}
+                  dl={dl}
+                  isHost={isHost}
+                  you={nick.trim()}
+                  onRemove={removeTrack}
+                  onLike={likeTrack}
+                  onVote={voteTrack}
+                  onReorder={reorderTrack}
+                  onOpenSearch={openSearch}
+                  className="min-h-0 flex-1"
+                />
+              )}
+              {center === "history" && (
+                <HistoryPanel history={history} onReAdd={addTrack} className="min-h-0 flex-1" />
+              )}
+              {center === "stats" && <StatsPanel stats={stats} className="min-h-0 flex-1" />}
+            </Panel>
+
+            <Panel
+              className={cn(
+                tab === "queue" ? "flex" : "hidden",
+                "md:flex",
+                center !== "queue" || queue.length > 0
+                  ? "max-h-[42%] shrink-0"
+                  : "min-h-0 flex-1"
+              )}
+            >
+              <Recommendations
+                seed={current}
+                mood={mood}
+                excludeIds={roomIds}
+                onAdd={addTrack}
+                className="min-h-0 flex-1"
+              />
+            </Panel>
           </div>
 
-          {/* chat */}
-          <ChatPanel
-            chat={chat}
-            aiDj={aiDj}
-            onSend={(text) => emit(EVENTS.CHAT_SEND, { text })}
-            className={cn(tab === "chat" ? "flex flex-1" : "hidden", "md:flex md:h-full")}
-          />
+          {/* ── column 3: the people ── */}
+          <Panel
+            className={cn(tab === "chat" ? "flex flex-1" : "hidden", "md:flex md:h-full md:gap-4")}
+          >
+            {/* Two surfaces, one column. Desktop stacks them; a phone hasn't the
+                height for that, so they take turns. */}
+            <div className="mb-4 shrink-0 md:hidden">
+              <div className="sw-seg">
+                <button
+                  className="sw-seg-item"
+                  data-active={pane === "chat"}
+                  onClick={() => setPane("chat")}
+                >
+                  <MessageSquare className="size-4" /> Chat
+                  {unread > 0 && pane !== "chat" && (
+                    <span className="grid min-w-4 place-items-center rounded-full bg-[image:var(--accent-gradient)] px-1 text-[10px] font-bold text-white">
+                      {unread}
+                    </span>
+                  )}
+                </button>
+                <button
+                  className="sw-seg-item"
+                  data-active={pane === "activity"}
+                  onClick={() => setPane("activity")}
+                >
+                  <ActivityIcon className="size-4" /> Activity
+                </button>
+              </div>
+            </div>
+
+            {/* The pane switch is scoped to `max-md` on purpose. Unscoped, the
+                `flex-1` that makes the chosen pane fill a phone also applies at
+                md, where both panes are on screen at once — and the two of them
+                then share the column equally instead of 38/62. */}
+            <ActivityFeed
+              events={chat}
+              reactions={reactionLog}
+              className={cn(
+                pane === "activity" ? "max-md:flex max-md:flex-1" : "max-md:hidden",
+                "md:flex md:min-h-0 md:basis-[38%] md:border-b md:border-white/8 md:pb-4"
+              )}
+            />
+            <ChatPanel
+              chat={chat}
+              you={nick.trim()}
+              aiDj={aiDj}
+              onSend={sendChat}
+              onTyping={onTyping}
+              statuses={statuses}
+              className={cn(
+                pane === "chat" ? "max-md:flex max-md:flex-1" : "max-md:hidden",
+                "md:flex md:min-h-0 md:flex-1"
+              )}
+            />
+          </Panel>
         </div>
 
-        <div className="px-3 pb-2 md:hidden">
+        <div className="px-4 pb-2 md:hidden">
           <InstallBanner code={code} />
         </div>
       </main>
+
+      {/* ── phone chrome: reactions and tabs, both within thumb reach ──
+          The tab bar used to sit at the top of the content, which on a 6"
+          phone is the one part of the screen a thumb cannot get to without
+          the hand moving. Everything you press often now lives in the same
+          band above the player. */}
+      <div className="relative z-40 shrink-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] px-4 py-2 backdrop-blur-xl md:hidden">
+        <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2">
+          <ReactionBar
+            onReact={react}
+            className="pointer-events-auto rounded-full border border-white/10 bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] px-1.5 py-1 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.8)] backdrop-blur-xl"
+          />
+        </div>
+        <TabBar tab={tab} setTab={setTab} queueCount={queue.length} unread={unread} />
+      </div>
 
       {/* ── fixed bottom player ── */}
       <BottomPlayer
@@ -446,15 +734,71 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
         skipVotes={skipVotes}
         needVotes={needVotes}
         volume={volume}
+        likes={currentLikes.length}
+        liked={youLikeCurrent}
+        onLike={() => current?.id && likeTrack(current.id)}
         onVolume={changeVolume}
         onPlayPause={() => emit(EVENTS.CONTROL_PLAYPAUSE)}
         onSkip={() => emit(EVENTS.CONTROL_SKIP)}
-        onSeek={(pos) => emit(EVENTS.CONTROL_SEEK, { position: pos })}
-        onVoteSkip={() => emit(EVENTS.VOTE_SKIP)}
+        onSeek={seekTo}
+        onVoteSkip={voteSkip}
         onShuffle={() => emit(EVENTS.CONTROL_SHUFFLE)}
         onRepeat={() => emit(EVENTS.CONTROL_REPEAT)}
-        onReact={(emoji) => emit(EVENTS.REACTION, { emoji })}
+        onReact={react}
       />
+    </div>
+  );
+}
+
+/** Placeholder for a split-out panel, in the shape of the panel it replaces. */
+function PanelLoading({ label }: { label: string }) {
+  return (
+    <div className="flex min-h-0 flex-1 flex-col gap-2" aria-busy>
+      <span className="sr-only">{label}</span>
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex items-center gap-3 p-2" aria-hidden>
+          <Skeleton className="size-10 shrink-0 rounded-sm" />
+          <div className="min-w-0 flex-1 space-y-2">
+            <Skeleton className="h-3 w-[55%] rounded-full" />
+            <Skeleton className="h-2.5 w-[35%] rounded-full" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Segmented control for the centre column: what's next, what happened, totals. */
+function CenterTabs({
+  view,
+  setView,
+  queueCount,
+  historyCount,
+}: {
+  view: CenterView;
+  setView: (v: CenterView) => void;
+  queueCount: number;
+  historyCount: number;
+}) {
+  const item = (id: CenterView, icon: React.ReactNode, label: string, badge?: number) => (
+    <button
+      key={id}
+      role="tab"
+      aria-selected={view === id}
+      data-active={view === id}
+      className="sw-seg-item"
+      onClick={() => setView(id)}
+    >
+      {icon}
+      <span className="max-sm:sr-only">{label}</span>
+      {badge ? <span className="tabular-nums text-muted">{badge}</span> : null}
+    </button>
+  );
+  return (
+    <div className="sw-seg mb-4 shrink-0" role="tablist" aria-label="Queue, history or session">
+      {item("queue", <ListMusic className="size-4" />, "Up next", queueCount)}
+      {item("history", <HistoryIcon className="size-4" />, "History", historyCount)}
+      {item("stats", <BarChart3 className="size-4" />, "Session")}
     </div>
   );
 }
@@ -473,24 +817,28 @@ function TabBar({
 }) {
   const item = (id: Tab, icon: React.ReactNode, label: string, badge?: number) => (
     <button
+      key={id}
       onClick={() => setTab(id)}
+      role="tab"
+      aria-selected={tab === id}
       aria-current={tab === id}
-      className={cn(
-        "relative flex flex-1 items-center justify-center gap-1.5 rounded-full py-2 text-xs font-semibold transition-colors",
-        tab === id ? "bg-white/12 text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.1)]" : "text-muted hover:text-ink"
-      )}
+      data-active={tab === id}
+      className="sw-seg-item"
     >
       {icon}
       {label}
       {badge ? (
-        <span className="grid min-w-4 place-items-center rounded-full bg-[var(--accent)] px-1 text-[10px] font-bold text-white">
+        <span
+          className="grid min-w-4 place-items-center rounded-full bg-[image:var(--accent-gradient)] px-1 text-[10px] font-bold text-white"
+          aria-label={`${badge} ${id === "chat" ? "unread" : "queued"}`}
+        >
           {badge}
         </span>
       ) : null}
     </button>
   );
   return (
-    <div className="flex items-center gap-1 rounded-full border border-white/8 bg-white/5 p-1">
+    <div className="sw-seg" role="tablist" aria-label="Room sections">
       {item("now", <Radio className="size-4" />, "Now")}
       {item("queue", <ListMusic className="size-4" />, "Queue", queueCount)}
       {item("search", <SearchIcon className="size-4" />, "Add")}
@@ -499,219 +847,53 @@ function TabBar({
   );
 }
 
-// Participants count with a click-to-open list.
-function Participants({ list }: { list: Participant[] }) {
-  const [open, setOpen] = useState(false);
+/**
+ * Who is here, as faces. The stack is the affordance and the list behind it is
+ * the detail — a room of twelve is unreadable as twelve names in a top bar.
+ */
+function ParticipantsMenu({
+  list,
+  statuses,
+}: {
+  list: Participant[];
+  statuses: Record<string, string>;
+}) {
   return (
-    <div className="relative">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        aria-label={`${list.length} listening`}
-        aria-expanded={open}
-        className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-semibold text-ink/80 transition-colors hover:bg-white/10"
-      >
-        <Users className="size-3.5" /> {list.length}
-      </button>
-      {open && (
+    <Popover
+      label={`${list.length} listening`}
+      width={264}
+      buttonClassName="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 py-1 pl-1 pr-3 transition-[background-color,border-color] duration-200 ease-[var(--ease)] hover:border-white/20 hover:bg-white/10"
+      button={
         <>
-          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-10 z-50 w-48 rounded-2xl border border-white/10 bg-[var(--popover)] p-2 shadow-xl sw-fade-in">
-            <div className="mb-1 px-2 text-[10px] font-semibold tracking-eyebrow text-accent-2 uppercase">
-              Listening ({list.length})
-            </div>
-            <ul className="sw-scroll max-h-56 space-y-0.5 overflow-y-auto">
-              {list.map((p) => (
-                <li key={p.id} className="truncate rounded-lg px-2 py-1 text-sm text-ink">
-                  {p.isHost ? "★ " : ""}
-                  {p.nick}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
-function QueuePanel({
-  queue,
-  dl,
-  isHost,
-  onRemove,
-  onOpenSearch,
-  className,
-}: {
-  queue: Track[];
-  dl: Record<string, number>;
-  isHost: boolean;
-  onRemove: (id: string) => void;
-  onOpenSearch: () => void;
-  className?: string;
-}) {
-  const totalSec = queue.reduce((n, t) => n + (t.duration || 0), 0);
-  const mins = Math.round(totalSec / 60);
-
-  return (
-    <div className={cn("min-h-0 flex-col sw-glass p-3 sm:p-4", className)}>
-      <div className="sw-label mb-3 shrink-0 justify-between">
-        <span className="flex items-center gap-2">
-          <ListMusic className="size-3.5" /> Up next
-        </span>
-        {queue.length > 0 && (
-          <span className="normal-case tracking-normal">
-            {queue.length} {queue.length === 1 ? "track" : "tracks"}
-            {mins > 0 ? ` · ${mins} min` : ""}
+          <AvatarStack
+            names={list.map((p) => p.nick)}
+            statuses={statuses as Record<string, Participant["status"]>}
+            max={3}
+            size="sm"
+          />
+          <span className="flex items-center gap-1 text-xs font-semibold text-ink/80">
+            <Users className="size-3.5" /> {list.length}
           </span>
-        )}
-      </div>
-
-      {queue.length === 0 ? (
-        <div className="flex flex-1 flex-col items-center justify-center gap-3 py-10 text-center">
-          <div className="grid size-12 place-items-center rounded-2xl border border-white/8 bg-white/[0.03]">
-            <ListMusic className="size-5 text-white/25" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-ink">The queue is empty</p>
-            <p className="mt-0.5 text-xs text-muted">Anyone in the room can add a track.</p>
-          </div>
-          <Button variant="outline" size="sm" onClick={onOpenSearch} className="gap-1.5">
-            <SearchIcon className="size-3.5" /> Find a song
-          </Button>
-        </div>
-      ) : (
-        <ul className="sw-scroll -mx-1 flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto px-1">
-          {queue.map((t, i) => (
-            <li
-              key={t.id}
-              className="group flex items-center gap-3 rounded-xl p-1.5 transition-colors hover:bg-white/[0.06]"
-            >
-              <span className="w-4 shrink-0 text-center font-mono text-[11px] tabular-nums text-muted/70">
-                {i + 1}
-              </span>
-              {t.thumbnail ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={t.thumbnail}
-                  alt=""
-                  className="size-10 shrink-0 rounded-lg border border-white/8 object-cover"
-                />
-              ) : (
-                <div className="size-10 shrink-0 rounded-lg bg-white/5" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-ink">{t.title}</div>
-                <div className="truncate text-xs text-muted">
-                  {t.artist}
-                  {t.addedBy ? ` · added by ${t.addedBy}` : ""}
-                </div>
+        </>
+      }
+    >
+      <div className="sw-label mb-2 px-1 text-[10px]">Listening ({list.length})</div>
+      <ul className="sw-scroll max-h-72 space-y-1 overflow-y-auto">
+        {list.map((p) => (
+          <li key={p.id}>
+            <details className="group">
+              <summary className="sw-row sw-focus flex cursor-pointer list-none items-center gap-2 p-1.5 text-sm text-ink">
+                <Avatar name={p.nick} size="sm" isHost={p.isHost} status={p.status} />
+                <span className="truncate">{p.nick}</span>
+              </summary>
+              <div className="px-1 pb-2 pt-3">
+                <PresenceCard p={p} />
               </div>
-              <QueueStatus status={t.status} live={dl[t.videoId]} />
-              {isHost && (
-                <button
-                  className="shrink-0 rounded-full p-1 text-muted opacity-0 transition-all hover:bg-white/10 hover:text-[var(--destructive)] focus-visible:opacity-100 group-hover:opacity-100"
-                  onClick={() => t.id && onRemove(t.id)}
-                  aria-label={`Remove ${t.title}`}
-                >
-                  <X className="size-3.5" />
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+            </details>
+          </li>
+        ))}
+      </ul>
+    </Popover>
   );
 }
 
-function QueueStatus({ status, live }: { status?: Status; live?: number }) {
-  const pct = live ?? status?.percent ?? 0;
-  const state = live != null && live < 100 ? "downloading" : status?.state ?? "pending";
-  if (state === "cached") return <Check className="size-4 shrink-0 text-[var(--accent-2)]" aria-label="ready" />;
-  if (state === "downloading")
-    return (
-      <span className="flex shrink-0 items-center gap-1 font-mono text-xs text-accent-2">
-        <Loader2 className="size-3.5 animate-spin" />
-        {pct}%
-      </span>
-    );
-  return <Clock className="size-4 shrink-0 text-muted" aria-label="queued" />;
-}
-
-function ChatPanel({
-  chat,
-  onSend,
-  aiDj,
-  className,
-}: {
-  chat: ChatMsg[];
-  onSend: (t: string) => void;
-  aiDj: string | null;
-  className?: string;
-}) {
-  const [text, setText] = useState("");
-  const endRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chat]);
-  const send = () => {
-    if (!text.trim()) return;
-    onSend(text.trim());
-    setText("");
-  };
-  const hasReal = chat.some((m) => !m.system);
-
-  return (
-    <div className={cn("min-h-0 flex-col sw-glass p-3 sm:p-4", className)}>
-      <div className="sw-label mb-3 shrink-0">
-        <MessageSquare className="size-3.5" /> Chat
-      </div>
-
-      <div className="sw-scroll min-h-0 flex-1 space-y-1.5 overflow-y-auto pr-1 text-sm">
-        {!hasReal && (
-          <p className="py-6 text-center text-xs text-muted">
-            {aiDj
-              ? `Say hi — or ask the DJ for something with /dj`
-              : "No messages yet. Say something."}
-          </p>
-        )}
-        {chat.map((m) =>
-          m.system ? (
-            <p key={m.id} className="py-0.5 text-center text-[11px] text-muted/80">
-              {m.text}
-            </p>
-          ) : (
-            <div key={m.id} className="leading-snug">
-              <span
-                className={cn(
-                  "font-semibold",
-                  m.dj ? "text-[var(--accent)]" : "text-[var(--accent-2)]"
-                )}
-              >
-                {m.dj ? "🎧 " : ""}
-                {m.nick}
-              </span>
-              <span className="text-muted"> · </span>
-              <span className="text-ink-soft">{m.text}</span>
-            </div>
-          )
-        )}
-        <div ref={endRef} />
-      </div>
-
-      <div className="mt-3 flex shrink-0 gap-2">
-        <Input
-          placeholder={aiDj ? "message · /dj <request>" : "say something…"}
-          value={text}
-          maxLength={500}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && send()}
-          aria-label="Chat message"
-        />
-        <Button variant="accent" onClick={send} disabled={!text.trim()} className="px-4">
-          Send
-        </Button>
-      </div>
-    </div>
-  );
-}

@@ -103,7 +103,7 @@ export default function ProxyPanel() {
           — 10 proxies and 1 GB/month, around 350–400 tracks. Referral link.
         </p>
         {saved?.hasWebshareKey && (
-          <p className="flex items-center gap-1.5 text-xs text-[#7ee787]">
+          <p className="flex items-center gap-1.5 text-xs text-[var(--success)]">
             <Check className="size-3" /> A key is stored. Saving again replaces it.
           </p>
         )}
@@ -140,13 +140,13 @@ export default function ProxyPanel() {
           </Button>
         </div>
         {count > 0 && (
-          <p className="flex items-center gap-1.5 text-xs text-[#7ee787]">
+          <p className="flex items-center gap-1.5 text-xs text-[var(--success)]">
             <Check className="size-3" /> {count} prox{count === 1 ? "y" : "ies"} stored.
           </p>
         )}
       </div>
 
-      <p className="flex items-start gap-1.5 rounded-xl border border-white/10 bg-white/[0.03] p-3 text-xs text-muted">
+      <p className="flex items-start gap-1.5 rounded-sm border border-white/10 bg-white/[0.03] p-3 text-xs text-muted">
         <Network className="mt-0.5 size-3.5 shrink-0 text-accent-2" />
         <span>
           Proxy traffic is usually metered, so tracks fetched through one are capped at
@@ -157,12 +157,12 @@ export default function ProxyPanel() {
       </p>
 
       {note && (
-        <p className="flex items-center gap-1.5 text-sm text-[#7ee787]">
+        <p className="flex items-center gap-1.5 text-sm text-[var(--success)]">
           <Check className="size-4" /> {note}
         </p>
       )}
       {error && (
-        <p className="flex items-center gap-1.5 text-sm text-[#ff8b8b]">
+        <p className="flex items-center gap-1.5 text-sm text-[var(--destructive)]">
           <TriangleAlert className="size-4" /> {error}
         </p>
       )}

@@ -63,7 +63,7 @@ export default function LoginForm() {
         </div>
 
         {error && (
-          <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+          <p className="rounded-sm border border-[color-mix(in_oklab,var(--destructive)_35%,transparent)] bg-[color-mix(in_oklab,var(--destructive)_12%,transparent)] px-4 py-3 text-sm text-[var(--destructive)]">
             {error}
           </p>
         )}

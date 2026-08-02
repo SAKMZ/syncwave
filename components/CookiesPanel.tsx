@@ -77,7 +77,7 @@ export default function CookiesPanel({ compact = false }: { compact?: boolean })
   return (
     <div className="grid gap-4">
       {/* Why this exists */}
-      <div className="rounded-xl border border-[color-mix(in_oklab,var(--accent)_35%,transparent)] bg-accent-soft p-4">
+      <div className="rounded-sm border border-[color-mix(in_oklab,var(--accent)_35%,transparent)] bg-accent-soft p-4">
         <div className="flex items-start gap-3">
           <ShieldAlert className="mt-0.5 size-4 shrink-0 text-accent-2" />
           <div className="text-sm">
@@ -96,7 +96,7 @@ export default function CookiesPanel({ compact = false }: { compact?: boolean })
       {/* Status */}
       {status && (
         <div
-          className={`flex items-center gap-2 rounded-xl border px-4 py-3 text-sm ${
+          className={`flex items-center gap-2 rounded-sm border px-4 py-3 text-sm ${
             status.present
               ? "border-soft-border bg-white/5 text-ink"
               : "border-soft-border bg-white/5 text-muted"
@@ -128,7 +128,7 @@ export default function CookiesPanel({ compact = false }: { compact?: boolean })
 
       {/* How to get one */}
       {!compact && (
-        <ol className="grid gap-2 rounded-xl border border-soft-border bg-white/[0.03] p-4 text-sm text-muted">
+        <ol className="grid gap-2 rounded-sm border border-soft-border bg-white/[0.03] p-4 text-sm text-muted">
           <li className="font-semibold text-ink">How to get your cookies.txt</li>
           <li>
             1. Install a <strong className="text-ink">&ldquo;Get cookies.txt LOCALLY&rdquo;</strong>{" "}
@@ -156,7 +156,7 @@ export default function CookiesPanel({ compact = false }: { compact?: boolean })
       )}
 
       {/* Privacy warning — this is a live session, treat it as a credential */}
-      <div className="flex items-start gap-3 rounded-xl border border-soft-border bg-white/[0.03] p-4 text-sm">
+      <div className="flex items-start gap-3 rounded-sm border border-soft-border bg-white/[0.03] p-4 text-sm">
         <TriangleAlert className="mt-0.5 size-4 shrink-0 text-muted" />
         <p className="text-muted">
           <strong className="text-ink">Use a throwaway Google account.</strong> This file
@@ -167,7 +167,7 @@ export default function CookiesPanel({ compact = false }: { compact?: boolean })
       </div>
 
       {error && (
-        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+        <p className="rounded-sm border border-[color-mix(in_oklab,var(--destructive)_35%,transparent)] bg-[color-mix(in_oklab,var(--destructive)_12%,transparent)] px-4 py-3 text-sm text-[var(--destructive)]">
           {error}
         </p>
       )}

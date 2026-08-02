@@ -23,7 +23,7 @@ export default function Home() {
       {!claimed && (
         <Link
           href="/setup"
-          className="mb-6 flex items-center gap-2.5 rounded-2xl border border-[color-mix(in_oklab,var(--accent)_45%,transparent)] bg-accent-soft px-4 py-3 text-left text-sm transition-colors hover:bg-[color-mix(in_oklab,var(--accent)_22%,transparent)]"
+          className="mb-6 flex items-center gap-2.5 rounded-md border border-[color-mix(in_oklab,var(--accent)_45%,transparent)] bg-accent-soft px-4 py-3 text-left text-sm transition-colors hover:bg-[color-mix(in_oklab,var(--accent)_22%,transparent)]"
         >
           <Lock className="size-4 shrink-0 text-accent-2" />
           <span>
