@@ -17,10 +17,17 @@ export default function CreateRoom() {
     setError("");
     try {
       const res = await fetch("/api/rooms", { method: "POST" });
-      const { code: newCode, ownerToken } = await res.json();
+      const body = await res.json().catch(() => null);
+      // A refusal still returns JSON, and without this check the missing code
+      // was pushed to the router as the string "undefined".
+      if (!res.ok || !body?.code) {
+        setError(body?.error || "Could not create a room. Is the server still running?");
+        setLoading(false);
+        return;
+      }
       // Persist the durable owner token so this browser reclaims host on return.
-      if (ownerToken) localStorage.setItem(`sw_owner_${newCode}`, ownerToken);
-      router.push(`/r/${newCode}?host=1`);
+      if (body.ownerToken) localStorage.setItem(`sw_owner_${body.code}`, body.ownerToken);
+      router.push(`/r/${body.code}?host=1`);
     } catch {
       setError("Could not create a room. Is the server still running?");
       setLoading(false);
