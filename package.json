@@ -1,6 +1,6 @@
 {
   "name": "syncwave",
-  "version": "0.9.3",
+  "version": "1.0.0",
   "private": true,
   "description": "Syncwave — a self-hosted Spotify Jam alternative. Listening rooms with a shared queue, synced playback, chat, reactions and an optional AI DJ.",
   "keywords": [
