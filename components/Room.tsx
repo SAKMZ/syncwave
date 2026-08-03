@@ -64,7 +64,6 @@ const ShortcutsDialog = dynamic(() => import("@/components/ShortcutsDialog"));
 import { PresenceCard } from "@/components/PresenceCard";
 import InstallButton, { InstallBanner } from "@/components/InstallButton";
 import ShareButton from "@/components/ShareButton";
-import MadeWithLove from "@/components/MadeWithLove";
 
 type Tab = "now" | "queue" | "search" | "chat";
 const TAB_ORDER: Tab[] = ["now", "queue", "search", "chat"];
@@ -438,7 +437,6 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
             </p>
           )}
         </Panel>
-        <MadeWithLove className="mt-8 text-center" />
       </main>
     );
   }

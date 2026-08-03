@@ -589,19 +589,6 @@ video {
 }
 .sw-fx-sparkles { animation-name: sw-fx-sparkle; animation-duration: 2s; }
 
-/* The heart in the footer. Two beats then a rest, like a real one, rather than
-   a steady throb — slow enough to notice only if you're looking at it. */
-@keyframes sw-heartbeat {
-  0%, 28%, 100% { transform: scale(1); }
-  8%  { transform: scale(1.22); }
-  16% { transform: scale(1); }
-  22% { transform: scale(1.14); }
-}
-.sw-heartbeat {
-  display: inline-block;
-  animation: sw-heartbeat 3.2s ease-in-out infinite;
-}
-
 /* Spinning disc for the artwork while playing. */
 /* In-page links glide rather than jump. The reduced-motion block below puts
    this back to `auto`, where an instant jump is the correct behaviour. */
@@ -942,7 +929,6 @@ html { scroll-behavior: smooth; }
   .sw-eq > span,
   .sw-wave-playing > span,
   .sw-float,
-  .sw-heartbeat,
   .sw-art-playing,
   .sw-status-pulse,
   .sw-skeleton::after,
