@@ -24,14 +24,16 @@ history, and an optional AI DJ. Runs on any computer you already own.
 
 ## See it running
 
-Two browser windows, one room. Everything a screenshot can't show — playback
-landing on the same second in both, the queue filling as tracks are added, chat
-and reactions arriving live, and the whole interface taking its colour from the
-album art of whatever is playing.
+<div align="center">
 
-<video src="https://raw.githubusercontent.com/SAKMZ/syncwave/main/docs/demo.mp4" poster="https://raw.githubusercontent.com/SAKMZ/syncwave/main/docs/demo-poster.jpg" controls muted playsinline width="100%"></video>
+![A Syncwave room mid-track-change. The listener has asked the AI DJ for ten lo-fi tracks in chat and the queue has filled with them; a second listener is chatting alongside. As the track changes from "Fly Away" to "Cloud 9" the entire room re-tints from teal to amber to match the new album art](docs/demo-loop.webp)
 
-*If the player doesn't load, [watch the demo here](https://raw.githubusercontent.com/SAKMZ/syncwave/main/docs/demo.mp4) (2 min, 4.5 MB).*
+</div>
+
+Above: the room changing colour as the track changes. The full recording —
+**[two minutes, unedited](docs/demo.mp4)** — has the rest of it: a `/dj` line in
+chat turning into ten queued tracks and a spoken intro, a second listener
+joining and talking, the queue, the activity feed, search and reactions.
 
 ---
 
