@@ -22,6 +22,17 @@ history, and an optional AI DJ. Runs on any computer you already own.
 
 </div>
 
+## See it running
+
+Two browser windows, one room. Everything a screenshot can't show — playback
+landing on the same second in both, the queue filling as tracks are added, chat
+and reactions arriving live, and the whole interface taking its colour from the
+album art of whatever is playing.
+
+<video src="https://raw.githubusercontent.com/SAKMZ/syncwave/main/docs/demo.mp4" poster="https://raw.githubusercontent.com/SAKMZ/syncwave/main/docs/demo-poster.jpg" controls muted playsinline width="100%"></video>
+
+*If the player doesn't load, [watch the demo here](https://raw.githubusercontent.com/SAKMZ/syncwave/main/docs/demo.mp4) (2 min, 4.5 MB).*
+
 ---
 
 ## What it is

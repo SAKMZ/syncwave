@@ -30,3 +30,6 @@ Thumbs.db
 .vscode/
 .idea/
 .claude/
+
+# raw screen recordings — the compressed copy lives in docs/
+/Recording*.mp4
