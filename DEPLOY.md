@@ -459,6 +459,12 @@ Everything is optional. Copy `.env.example` to `.env` to change any of it.
 | `WEBSHARE_API_KEY` | Fetches a proxy pool from Webshare and refreshes it hourly. |
 | `YTDLP_PROXY_LIST` | Comma-separated proxy URLs, any provider. Used instead of the API key. |
 | `YTDLP_PROXY` | A single proxy, always tried first. Works alone, or alongside a pool. |
+| `PROXY_MAX_ABR` | Bitrate cap (kbps) for proxied downloads only. Default `96`, `0` disables. Direct connections are never capped. |
+| `MAX_PARALLEL_DOWNLOADS` | Tracks fetched at once (default `3`). Each is a yt-dlp process plus an ffmpeg remux, so this is where a busy box becomes CPU-bound. `0` removes the limit. |
+| `ROOM_CREATE_LIMIT` | New rooms per IP address per hour (default `20`). The only write an anonymous visitor can repeat forever. `0` removes the limit. A household behind one NAT shares an address, and so shares the allowance. |
+
+The last two only matter on an instance the public can reach. Neither is
+reachable by a person using the app normally.
 
 The **AI DJ** (provider, model, API key, persona) is configured at runtime in
 the **`/admin`** console — no restart, no rebuild. Providers: a local **Ollama**
