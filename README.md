@@ -22,36 +22,55 @@ Runs on a computer you already own.
 
 ## Try it
 
+Two ways, depending on what's already on the machine.
+
+### Double-click it — nothing to install
+
+1. **Code → Download ZIP**, and unzip it.
+2. **Windows:** double-click `start.bat` · **macOS/Linux:** `./start.sh`
+
+There is no step 3, and no step 0. If the machine has no Node 20+, the launcher
+fetches an official copy, checks it against the published SHA-256 and keeps it
+in a `.runtime` folder beside the app — nothing system-wide, and deleting that
+folder undoes it. ffmpeg and a JS runtime come bundled, because YouTube refuses
+downloads without one.
+
+The first run builds (a few minutes); after that it starts in seconds, opens
+your browser, and prints a **public HTTPS link** via a Cloudflare quick tunnel:
+
+```
+  On this computer   http://localhost:3000
+  Share this link    https://reg-points-advised-course.trycloudflare.com
+```
+
+Send that to anyone, anywhere — no account, no port forwarding, no domain. Pass
+`--local` to stay on your own network instead.
+
+### Docker — for a box that stays on
+
 ```bash
 git clone https://github.com/SAKMZ/syncwave.git && cd syncwave
 cp .env.example .env
 docker compose up -d --build
 ```
 
-Open **http://localhost:3000**. Everything it stores lives in `./data` (rooms and
-settings) and `./cache` (audio) — back those up or delete them, nothing else on
-the machine is touched.
+Then open **http://localhost:3000**. There's no tunnel in this mode — put it
+behind your own domain or Tailscale, both in [DEPLOY.md](DEPLOY.md).
+
+### Either way
+
+Everything it stores lives in `./data` (rooms and settings) and `./cache`
+(audio) — back those up or delete them, nothing else on the machine is touched.
 
 On first run it sends you to **`/setup`** to set an admin password. Do that
 straight away: until it's set, anyone who can reach the address can claim the
 instance. Rooms themselves are unaffected — the password only guards
 configuration.
 
-**Your friends aren't on your Wi-Fi.** The launcher can print a public HTTPS link
-via a Cloudflare quick tunnel — no account, no port forwarding, no domain — so
-you can send it to anyone, anywhere.
-
 <details>
-<summary><b>Other ways to run it</b> — double-click launcher, Linux one-liner, cloud host</summary>
+<summary><b>Other ways to run it</b> — Linux one-liner, development, cloud host</summary>
 
 <br />
-
-**No Docker, nothing installed:** download the repo as a ZIP, then double-click
-`start.bat` (Windows) or run `./start.sh` (macOS/Linux). If the machine has no
-Node 20+, the launcher fetches an official copy, checks it against the published
-SHA-256, and keeps it in a `.runtime` folder beside the app — nothing
-system-wide, and deleting that folder undoes it. ffmpeg and a JS runtime come
-bundled.
 
 **Dedicated Linux server:**
 
