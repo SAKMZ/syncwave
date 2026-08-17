@@ -227,7 +227,7 @@ export default function Home() {
             <div className="max-w-xl">
               <h2 id="open-source" className="sw-label scroll-mt-24">
                 <Heart className="size-3.5" aria-hidden />
-                Open source
+                Source available
               </h2>
               <p className="mt-4 font-display text-3xl leading-tight font-bold tracking-tight">
                 Run your own, in about a minute.
@@ -235,8 +235,8 @@ export default function Home() {
               <p className="mt-4 text-sm leading-relaxed text-muted">
                 Double-click a launcher, or one Docker command. It fetches its own Node if
                 the machine hasn&rsquo;t got one, prints a public HTTPS link you can send to
-                anyone, and stores everything in two folders you can back up or delete. MIT
-                licensed.
+                anyone, and stores everything in two folders you can back up or delete. Free
+                to self-host for personal use.
               </p>
 
               <div className="mt-7 flex flex-wrap items-center gap-3">

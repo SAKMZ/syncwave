@@ -9,7 +9,7 @@ import { REPO_URL, STUDIO } from "@/lib/brand";
  * It used to be two stacked blocks, a product one and a studio one, each with
  * its own heading and its own set of links. Two footers, effectively, and the
  * second one repeated what the first had already said: GitHub appeared twice,
- * the MIT licence twice, the studio URL twice. A footer is a place to leave,
+ * the license twice, the studio URL twice. A footer is a place to leave,
  * not a second page — so it's one row of links and one line of small print.
  */
 export default function SiteFooter() {
@@ -20,7 +20,7 @@ export default function SiteFooter() {
           <div>
             <Wordmark />
             <p className="mt-2 text-xs text-muted">
-              Self-hosted listening rooms. MIT licensed.
+              Self-hosted listening rooms. Free for personal use, source available.
             </p>
           </div>
 

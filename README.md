@@ -10,7 +10,7 @@ Start a room, share one link, and everyone hears the same second of the same
 song. Shared queue, live chat, reactions, vote-to-skip and an optional AI DJ.
 Runs on a computer you already own.
 
-![License: MIT](https://img.shields.io/badge/License-MIT-8b5cff.svg)
+![License: Noncommercial](https://img.shields.io/badge/License-Noncommercial-8b5cff.svg)
 ![Next.js 15](https://img.shields.io/badge/Next.js-15-000000.svg?logo=next.js)
 ![Node 20+](https://img.shields.io/badge/Node-20%2B-3c873a.svg?logo=node.js&logoColor=white)
 ![Self-hosted](https://img.shields.io/badge/Self--hosted-Docker-2496ed.svg?logo=docker&logoColor=white)
@@ -260,4 +260,9 @@ fun, open a discussion and say hi.
 
 ## License
 
-[MIT](LICENSE) © 2026 Syncwave contributors
+[PolyForm Noncommercial 1.0.0](LICENSE) © 2026 Syncwave contributors
+
+Free to run, fork, and modify for personal, hobby, and nonprofit use. Not licensed
+for commercial use — selling access, running it as a paid or ad-supported service,
+or bundling it into a product for profit — without a separate agreement. Reach out
+via a GitHub issue if you want to license it commercially.
