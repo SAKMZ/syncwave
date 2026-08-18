@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
   Check,
@@ -82,6 +82,12 @@ function SearchPanel({
   /** When set, the list shows this album's tracks instead of search results. */
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
   const [cursor, setCursor] = useState(-1);
+
+  // The room renders two of these — the desktop overlay and the phone's Add
+  // tab — and both were emitting id="sw-search-results". Duplicate ids make
+  // aria-controls ambiguous, so assistive tech resolves it to whichever came
+  // first in the DOM regardless of which field has focus.
+  const listId = useId();
 
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
@@ -433,7 +439,10 @@ function SearchPanel({
         aria-label="Search YouTube Music"
         role="combobox"
         aria-expanded={showResults}
-        aria-controls="sw-search-results"
+        // Only claim to control the list while it's actually in the DOM — the
+        // overlay unmounts its results when closed, and aria-controls pointing
+        // at nothing is worse than not pointing at all.
+        aria-controls={showResults ? listId : undefined}
         aria-autocomplete="list"
         className={cn(
           "w-full rounded-full border border-input bg-field py-2.5 pl-11 text-[13px] text-ink outline-none",
@@ -490,7 +499,7 @@ function SearchPanel({
   );
 
   const body = (
-    <div id="sw-search-results">
+    <div id={listId}>
       {!isEmptyQuery && !album && tabs}
       <div className={cn(variant === "overlay" ? "mt-2" : "mt-4 flex min-h-0 flex-1 flex-col")}>
         {list}

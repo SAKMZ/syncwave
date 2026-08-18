@@ -107,7 +107,7 @@ export default function BottomPlayer({
       : current?.artist;
 
   return (
-    <footer className="relative z-40 shrink-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-2xl">
+    <footer className="sw-safe-b sw-safe-x relative z-40 shrink-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] backdrop-blur-2xl">
       {/* A hairline of the current track's colour across the whole bar — the
           quietest possible way to tie the player to what is playing. */}
       <div

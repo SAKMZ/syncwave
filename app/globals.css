@@ -235,6 +235,37 @@ video {
 }
 
 /* ---------------------------------------------------------------------------
+   Safe areas
+
+   layout.tsx sets viewportFit: "cover", which is what lets the ambient
+   background reach the edges of a notched phone. The cost of that is that the
+   viewport now extends *under* the home indicator and the notch, so anything
+   pinned to an edge needs to say how far in it actually sits. Without this the
+   bottom player's controls and the phone tab bar render beneath the home
+   indicator on every iPhone since the X — tappable in theory, and swiping the
+   app away in practice.
+
+   Applied as padding rather than margin so the blurred bar itself still
+   reaches the physical bottom of the screen; only its contents come inward.
+--------------------------------------------------------------------------- */
+.sw-safe-b {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.sw-safe-x {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+/* Top inset is 0 in an ordinary browser tab — the browser's own chrome is
+   already holding that space. It only becomes non-zero once a room is
+   installed to the home screen and runs standalone, which is exactly the mode
+   this app encourages, and exactly where the header would otherwise sit
+   underneath the status bar. The 0.75rem matches the header's own py-3, since
+   this replaces that side rather than adding to it. */
+.sw-safe-t {
+  padding-top: calc(0.75rem + env(safe-area-inset-top, 0px));
+}
+
+/* ---------------------------------------------------------------------------
    Surfaces — panel (24) / card (18) / row (12)
 --------------------------------------------------------------------------- */
 

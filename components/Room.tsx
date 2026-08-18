@@ -353,6 +353,21 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
         setActiveSlot((s) => (s === "A" ? "B" : "A"));
         return;
       }
+      // The server went somewhere the fade didn't predict — a vote-skip
+      // landed, the host skipped, or the queue was reordered mid-fade. The
+      // inactive element is part-way into the wrong song and audible, and
+      // adopting it is exactly what we must not do, so stop it here: this is
+      // the only place that learns the prediction was wrong.
+      if (crossfadingRef.current || (inactive && !inactive.paused)) {
+        cancelCrossfade();
+        crossfadingRef.current = false;
+        if (inactive) {
+          inactive.pause();
+          inactive.removeAttribute("src");
+          inactive.load();
+        }
+        active.volume = Math.min(1, volumeRef.current * (current.gain ?? 1));
+      }
       retryRef.current = 0;
       active.src = wantSrc;
       active.load();
@@ -371,8 +386,16 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
         if (crossfadingRef.current) {
           cancelCrossfade();
           crossfadingRef.current = false;
+          // The ramp had already pulled this element part-way down, and
+          // cancelling mid-ramp leaves it there — silent-ish playback with no
+          // way back up, since the volume effect stands aside during a fade.
+          active.volume = Math.min(1, volumeRef.current * (current.gain ?? 1));
         }
-        inactive?.pause();
+        if (inactive) {
+          inactive.pause();
+          inactive.removeAttribute("src");
+          inactive.load();
+        }
       }
 
       // Start fading into the next track a few seconds before this one ends.
@@ -719,7 +742,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       {/* ── top bar: identity, mood, search, presence ── */}
       {/* z-50 so the search dropdown clears the bottom player (z-40) rather
           than sliding behind it on a short window. */}
-      <header className="z-50 flex shrink-0 items-center gap-4 border-b border-white/8 px-4 py-3 backdrop-blur-xl">
+      <header className="sw-safe-t sw-safe-x z-50 flex shrink-0 items-center gap-4 border-b border-white/8 px-4 py-3 backdrop-blur-xl">
         <div className="flex min-w-0 items-center gap-3">
           {/* Same mark as the landing page and the favicon, tinted by the
               artwork like everything else in the room. */}
@@ -969,13 +992,22 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
           phone is the one part of the screen a thumb cannot get to without
           the hand moving. Everything you press often now lives in the same
           band above the player. */}
-      <div className="relative z-40 shrink-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] px-4 py-2 backdrop-blur-xl md:hidden">
-        <div className="pointer-events-none absolute inset-x-0 bottom-full flex justify-center pb-2">
+      {/* Floating reactions. Deliberately not inside the tab-bar container it
+          used to live in: that container is phone-only, so between md and lg
+          — tablets, and any window narrower than a laptop — the room had no
+          way to react at all, the player's own bar not starting until lg.
+          Zero-height and absolutely positioned so it overlays whatever is
+          above it rather than taking a row of the height a phone hasn't got. */}
+      <div className="pointer-events-none relative z-40 h-0 lg:hidden">
+        <div className="absolute inset-x-0 bottom-2 flex justify-center">
           <ReactionBar
             onReact={react}
             className="pointer-events-auto rounded-full border border-white/10 bg-[color-mix(in_srgb,var(--bg)_92%,transparent)] px-1.5 py-1 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.8)] backdrop-blur-xl"
           />
         </div>
+      </div>
+
+      <div className="sw-safe-x relative z-40 shrink-0 border-t border-white/8 bg-[color-mix(in_srgb,var(--bg)_88%,transparent)] px-4 py-2 backdrop-blur-xl md:hidden">
         <TabBar tab={tab} setTab={setTab} queueCount={queue.length} unread={unread} />
       </div>
 
