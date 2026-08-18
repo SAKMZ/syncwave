@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import {
+  Cast,
   Heart,
   Loader2,
   Pause,
@@ -51,6 +52,9 @@ export default function BottomPlayer({
   onShuffle,
   onRepeat,
   onReact,
+  castSupported,
+  castConnected,
+  onCast,
 }: {
   current: Track | null;
   isPlaying: boolean;
@@ -76,6 +80,10 @@ export default function BottomPlayer({
   onShuffle: () => void;
   onRepeat: () => void;
   onReact: (emoji: string) => void;
+  /** Chromecast/AirPlay via the browser's own Remote Playback API. Experimental. */
+  castSupported?: boolean;
+  castConnected?: boolean;
+  onCast?: () => void;
 }) {
   const dur = duration || current?.duration || 0;
   const cachePct = downloadPct ?? 0;
@@ -258,10 +266,24 @@ export default function BottomPlayer({
           </div>
         </div>
 
-        {/* ── right: reactions and volume ── */}
+        {/* ── right: reactions, cast and volume ── */}
         <div className="flex items-center justify-end gap-2">
           <ReactionBar onReact={onReact} className="hidden lg:flex" />
           <span className="hidden h-6 w-px bg-white/8 lg:block" aria-hidden />
+          {castSupported && (
+            <button
+              onClick={onCast}
+              className={cn(
+                "hidden size-9 place-items-center rounded-full transition-colors duration-200 ease-[var(--ease)] hover:bg-white/10 sm:grid",
+                castConnected ? "text-[var(--accent-2)]" : "text-ink/65 hover:text-ink"
+              )}
+              aria-label={castConnected ? "Casting" : "Cast to a speaker or TV"}
+              aria-pressed={castConnected}
+              title={castConnected ? "Casting" : "Cast to a speaker or TV"}
+            >
+              <Cast className="size-4" />
+            </button>
+          )}
           <Volume volume={volume} onVolume={onVolume} />
         </div>
       </div>

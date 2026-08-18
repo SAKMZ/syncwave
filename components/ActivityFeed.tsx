@@ -11,6 +11,7 @@ import {
   LogOut,
   Music,
   SkipForward,
+  UserX,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { ChatMsg, ReactionEvent, SystemKind } from "@/lib/types";
@@ -41,6 +42,7 @@ const ICON: Record<SystemKind | "generic" | "reaction", React.ElementType> = {
   skipped: SkipForward,
   dj: Headphones,
   error: AlertTriangle,
+  kicked: UserX,
   reaction: Heart,
   generic: ActivityIcon,
 };
@@ -54,6 +56,7 @@ const TONE: Record<SystemKind | "generic" | "reaction", string> = {
   skipped: "text-ink-soft bg-white/8",
   dj: "text-[var(--accent-2)] bg-[color-mix(in_oklab,var(--accent)_20%,transparent)]",
   error: "text-[var(--destructive)] bg-[color-mix(in_oklab,var(--destructive)_14%,transparent)]",
+  kicked: "text-[var(--destructive)] bg-[color-mix(in_oklab,var(--destructive)_14%,transparent)]",
   reaction: "text-[var(--accent-3)] bg-[color-mix(in_oklab,var(--accent-3)_14%,transparent)]",
   generic: "text-muted bg-white/5",
 };

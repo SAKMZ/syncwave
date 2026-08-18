@@ -21,6 +21,8 @@ export type Track = {
   likes?: string[];
   votes?: string[];
   status?: Status;
+  /** Loudness-normalization multiplier (linear), applied client-side. 1 or absent = no change. */
+  gain?: number;
 };
 
 /** What someone is doing. Everything but `reconnecting` is client-reported. */
@@ -43,6 +45,8 @@ export type Participant = {
   messages: number;
   /** emoji → how many times they've sent it. */
   reactions: Record<string, number>;
+  /** Host has muted this participant's chat. */
+  muted?: boolean;
 };
 
 /** What happened, for system entries in the room log. */
@@ -53,7 +57,8 @@ export type SystemKind =
   | "nowplaying"
   | "skipped"
   | "dj"
-  | "error";
+  | "error"
+  | "kicked";
 
 export type ChatMsg = {
   id: string;
@@ -104,6 +109,9 @@ export type RoomStats = {
 };
 
 export type Mood = { id: string; emoji: string; label: string; why: string };
+
+/** A non-host joiner waiting on the host to let them into an invite-only room. */
+export type PendingRequest = { id: string; nick: string; requestedAt: number };
 
 export type Repeat = "off" | "one" | "all";
 

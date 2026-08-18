@@ -6,6 +6,7 @@ import { io, type Socket } from "socket.io-client";
 import {
   Activity as ActivityIcon,
   BarChart3,
+  Check,
   History as HistoryIcon,
   Keyboard,
   ListMusic,
@@ -13,7 +14,9 @@ import {
   Play,
   Radio,
   Search as SearchIcon,
+  UserPlus,
   Users,
+  X,
 } from "lucide-react";
 import { EVENTS } from "@/lib/protocol.mjs";
 import { cn } from "@/lib/cn";
@@ -22,6 +25,7 @@ import type {
   HistoryEntry,
   Mood,
   Participant,
+  PendingRequest,
   PresenceStatus,
   ReactionEvent,
   Repeat,
@@ -29,6 +33,9 @@ import type {
   Track,
 } from "@/lib/types";
 import { useArtworkTheme } from "@/hooks/useArtworkTheme";
+import { useCasting } from "@/hooks/useCasting";
+import { useCrossfade } from "@/hooks/useCrossfade";
+import { useMediaSession } from "@/hooks/useMediaSession";
 import { usePresence } from "@/hooks/usePresence";
 import { useShortcuts } from "@/hooks/useShortcuts";
 import { useSwipe } from "@/hooks/useSwipe";
@@ -75,6 +82,11 @@ type SidePane = "chat" | "activity";
 export default function Room({ code, asHost }: { code: string; asHost: boolean }) {
   const [nick, setNick] = useState("");
   const [joined, setJoined] = useState(false);
+  const [kicked, setKicked] = useState(false);
+  const [awaitingApproval, setAwaitingApproval] = useState(false);
+  const [denied, setDenied] = useState(false);
+  // Host-only: who's waiting to be let into an invite-only room.
+  const [pendingRequests, setPendingRequests] = useState<PendingRequest[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [roomName, setRoomName] = useState(`Room ${code}`);
   const [aiDj, setAiDj] = useState<string | null>(null);
@@ -114,6 +126,28 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   const offsetRef = useRef(0);
   const playbackRef = useRef({ startedAt: 0, pausedPosition: 0, isPlaying: false });
 
+  // Crossfade: a second element to fade into ahead of a natural track end.
+  // `activeSlot` says which element the sync loop, volume and onEnded treat
+  // as authoritative — it only ever flips once the server's own track change
+  // confirms the fade guessed right, never on the fade's own timer (see the
+  // audio-sync effect below for why that distinction matters).
+  const nextAudioRef = useRef<HTMLAudioElement | null>(null);
+  const [activeSlot, setActiveSlot] = useState<"A" | "B">("A");
+  const crossfadeStartedRef = useRef(false);
+  const crossfadingRef = useRef(false);
+  const { start: startCrossfade, cancel: cancelCrossfade } = useCrossfade();
+  const queueRef = useRef<Track[]>([]);
+  const volumeRef = useRef(1);
+  const CROSSFADE_SECONDS = 5;
+  const CROSSFADE_MIN_DURATION = 10;
+
+  const casting = useCasting(
+    useCallback(
+      () => (activeSlot === "A" ? audioRef.current : nextAudioRef.current),
+      [activeSlot]
+    )
+  );
+
   const isHost = you != null && participants.find((p) => p.id === you)?.isHost === true;
   const serverNow = () => Date.now() + offsetRef.current;
 
@@ -141,11 +175,35 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     }
   }, []);
 
-  // Apply volume to the element whenever it or the track changes (a new src
-  // resets nothing, but the element may be recreated between renders).
+  // Apply volume to the *active* element whenever it, the track, or which
+  // slot is active changes. A crossfade in progress owns both elements'
+  // volume on its own terms — this effect steps back until it's done, or it
+  // would fight the ramp with a jump to full volume mid-fade. The loudness
+  // gain is a track-level correction, not a listener preference, so it
+  // multiplies the listener's own volume rather than replacing it — volume
+  // stays entirely local either way.
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume;
-  }, [volume, current?.videoId]);
+    if (crossfadingRef.current) return;
+    const el = activeSlot === "A" ? audioRef.current : nextAudioRef.current;
+    if (el) el.volume = Math.min(1, volume * (current?.gain ?? 1));
+  }, [volume, current?.videoId, current?.gain, activeSlot]);
+
+  // Read via refs inside the tick loop below, so adjusting the volume slider
+  // or the queue doesn't restart the audio-sync effect (and with it, the
+  // src-reload check) on every keystroke-equivalent update.
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
+  useEffect(() => {
+    queueRef.current = queue;
+  }, [queue]);
+
+  // A crossfade is a one-shot per track — reset the guard the moment the
+  // server's own idea of the current track changes, whether that came from
+  // the crossfade itself completing or an explicit skip.
+  useEffect(() => {
+    crossfadeStartedRef.current = false;
+  }, [current?.videoId]);
 
   const changeVolume = useCallback((v: number) => {
     setVolume(v);
@@ -180,6 +238,15 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
 
     socket.on("connect", () => socket.emit(EVENTS.JOIN, { code, nick: nick.trim(), ownerToken }));
     socket.on(EVENTS.ERROR, (e: { message: string }) => setError(e.message));
+    socket.on(EVENTS.KICKED, () => setKicked(true));
+    socket.on(EVENTS.JOIN_PENDING, () => setAwaitingApproval(true));
+    socket.on(EVENTS.JOIN_DENIED, () => {
+      setAwaitingApproval(false);
+      setDenied(true);
+    });
+    socket.on(EVENTS.PENDING_UPDATE, (s: { pending: PendingRequest[] }) =>
+      setPendingRequests(s.pending || [])
+    );
     socket.on(EVENTS.ROOM_STATE, (s: any) => {
       setYou(s.you);
       setRoomName(s.name || `Room ${code}`);
@@ -190,7 +257,12 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       setHistory(s.history || []);
       setStats(s.stats ?? null);
       setMood(s.mood ?? null);
+      setPendingRequests(s.pending || []);
       applyPlayback(s);
+      // Only a real seat (not a pending request) reaches this handler at all —
+      // an invite-only room's non-host joiners get JOIN_PENDING instead.
+      setAwaitingApproval(false);
+      setJoined(true);
     });
     socket.on(EVENTS.QUEUE_UPDATE, (s: { queue: Track[] }) => setQueue(s.queue));
     socket.on(EVENTS.PARTICIPANTS_UPDATE, (s: { participants: Participant[] }) =>
@@ -227,7 +299,6 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     const ping = () => socket.emit(EVENTS.SYNC_PING, { t0: Date.now() });
     ping();
     const pingId = setInterval(ping, 5000);
-    setJoined(true);
     return () => {
       clearInterval(pingId);
       socket.close();
@@ -250,42 +321,125 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     if (tab === "chat" && pane === "chat") setUnread(0);
   }, [tab, pane, chat]);
 
-  // audio sync loop — only runs once the server says the track is ready.
+  /**
+   * Audio sync loop — only runs once the server says the track is ready.
+   *
+   * Runs on whichever element `activeSlot` currently names. A crossfade's own
+   * fade timer never decides the flip: it only fades volume on the side.
+   * The flip happens right here, in the same place that already detects "the
+   * server's track changed" — if the *inactive* element already has that
+   * exact audio loaded and playing (because a fade already guessed right),
+   * this adopts it instead of reloading. Driving the flip off the real
+   * `current.videoId` change, rather than off the fade's own 5-second timer,
+   * is what keeps this from racing the server: the fade is only ever a local
+   * preview until the server actually confirms the track changed.
+   */
   const retryRef = useRef(0);
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !current || preparing) return;
+    const active = activeSlot === "A" ? audioRef.current : nextAudioRef.current;
+    const inactive = activeSlot === "A" ? nextAudioRef.current : audioRef.current;
+    if (!active || !current || preparing) return;
     const wantSrc = `/audio/${current.videoId}`;
-    if (!audio.src.endsWith(wantSrc)) {
+
+    if (!active.src.endsWith(wantSrc)) {
+      if (inactive && inactive.src.endsWith(wantSrc) && !inactive.paused) {
+        // Already faded into this exact track — adopt it rather than
+        // reloading, and let this effect re-run on the newly active element.
+        // The element being retired keeps playing at its faded-out volume
+        // otherwise — nothing else ever stops it once it's no longer active.
+        cancelCrossfade();
+        crossfadingRef.current = false;
+        active.pause();
+        setActiveSlot((s) => (s === "A" ? "B" : "A"));
+        return;
+      }
       retryRef.current = 0;
-      audio.src = wantSrc;
-      audio.load();
+      active.src = wantSrc;
+      active.load();
     }
+
     const tick = () => {
       const pb = playbackRef.current;
       const expected = pb.isPlaying ? (serverNow() - pb.startedAt) / 1000 : pb.pausedPosition;
-      if (pb.isPlaying && audio.paused) {
-        audio
+      const dur = current.duration || 0;
+
+      // A seek backward (or anything else that undoes "near the end") after a
+      // crossfade already started leaves it previewing a track that's no
+      // longer imminent — abandon it rather than leave it playing ahead.
+      if (crossfadeStartedRef.current && dur - expected > CROSSFADE_SECONDS + 2) {
+        crossfadeStartedRef.current = false;
+        if (crossfadingRef.current) {
+          cancelCrossfade();
+          crossfadingRef.current = false;
+        }
+        inactive?.pause();
+      }
+
+      // Start fading into the next track a few seconds before this one ends.
+      // Shuffle makes queue[0] an unreliable prediction of what plays next,
+      // so it's excluded rather than risk fading into the wrong song.
+      // repeat:"one" replays the same track — that's a loop, not a "next
+      // song" moment, so it stays a hard cut. Only ever attempted once per
+      // track (crossfadeStartedRef), and only into audio that's already
+      // fully cached — anything still downloading falls back to the existing
+      // hard-cut-and-wait behaviour rather than fading into a stall.
+      if (
+        !crossfadeStartedRef.current &&
+        !crossfadingRef.current &&
+        pb.isPlaying &&
+        !shuffle &&
+        repeat !== "one" &&
+        dur >= CROSSFADE_MIN_DURATION &&
+        dur - expected > 0 &&
+        dur - expected <= CROSSFADE_SECONDS
+      ) {
+        const next = queueRef.current[0];
+        if (next && inactive && next.status?.state === "cached") {
+          crossfadeStartedRef.current = true;
+          crossfadingRef.current = true;
+          inactive.src = `/audio/${next.videoId}`;
+          inactive.currentTime = 0;
+          inactive.volume = 0;
+          inactive.play().catch(() => {});
+          // The next track's own loudness gain isn't known client-side until
+          // the server confirms the switch, so the fade targets plain
+          // listener volume — the gain correction applies a moment later,
+          // once `current.gain` arrives, same as any other track.
+          startCrossfade(active, inactive, CROSSFADE_SECONDS, volumeRef.current, () => {
+            crossfadingRef.current = false;
+          });
+        }
+      }
+
+      if (pb.isPlaying && active.paused) {
+        active
           .play()
           .then(() => setNeedsGesture(false))
           .catch((err) => {
             if (err?.name === "NotAllowedError") setNeedsGesture(true);
           });
       }
-      if (!pb.isPlaying && !audio.paused) audio.pause();
-      if (Number.isFinite(expected) && Math.abs(audio.currentTime - expected) > 0.75) {
-        audio.currentTime = Math.max(0, expected);
+      if (!pb.isPlaying && !active.paused) active.pause();
+      // A crossfade in progress owns the active element's fade-out on its own
+      // terms — forcing its position to `expected` mid-ramp would just fight
+      // the fade with a stutter right as it's supposed to be smooth.
+      if (
+        !crossfadingRef.current &&
+        Number.isFinite(expected) &&
+        Math.abs(active.currentTime - expected) > 0.75
+      ) {
+        active.currentTime = Math.max(0, expected);
       }
-      setBuffering(pb.isPlaying && audio.readyState < 3);
+      setBuffering(pb.isPlaying && active.readyState < 3);
     };
     tick();
     const id = setInterval(tick, 1000);
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [current?.videoId, isPlaying, preparing]);
+  }, [current?.videoId, isPlaying, preparing, activeSlot, shuffle, repeat]);
 
   const resumeAudio = () => {
-    const audio = audioRef.current;
+    const audio = activeSlot === "A" ? audioRef.current : nextAudioRef.current;
     if (!audio) return;
     audio.play().then(() => setNeedsGesture(false)).catch(() => {});
   };
@@ -294,7 +448,9 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     if (isHost && current) emit(EVENTS.TRACK_ENDED, { videoId: current.videoId });
   };
   const onAudioError = () => {
-    const audio = audioRef.current;
+    // Wired to whichever <audio> tag is currently active (see the JSX below),
+    // so this is only ever called for the one the sync loop is governing.
+    const audio = activeSlot === "A" ? audioRef.current : nextAudioRef.current;
     if (!audio || !current || retryRef.current >= 6) return;
     retryRef.current += 1;
     setTimeout(() => {
@@ -328,7 +484,28 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
     [emit]
   );
   const removeTrack = useCallback((id: string) => emit(EVENTS.QUEUE_REMOVE, { id }), [emit]);
+  const muteParticipant = useCallback(
+    (id: string, muted: boolean) => emit(EVENTS.HOST_MUTE, { id, muted }),
+    [emit]
+  );
+  const kickParticipant = useCallback((id: string) => emit(EVENTS.HOST_KICK, { id }), [emit]);
+  const approveJoin = useCallback((id: string) => emit(EVENTS.HOST_APPROVE, { id }), [emit]);
+  const denyJoin = useCallback((id: string) => emit(EVENTS.HOST_DENY, { id }), [emit]);
   const seekTo = useCallback((pos: number) => emit(EVENTS.CONTROL_SEEK, { position: pos }), [emit]);
+  const playPause = useCallback(() => emit(EVENTS.CONTROL_PLAYPAUSE), [emit]);
+  const skip = useCallback(() => emit(EVENTS.CONTROL_SKIP), [emit]);
+
+  useMediaSession({
+    current,
+    isPlaying,
+    position,
+    duration: current?.duration ?? 0,
+    isHost,
+    onPlayPause: playPause,
+    onSkip: skip,
+    onSeek: seekTo,
+  });
+
   const voteSkip = useCallback(() => {
     emit(EVENTS.VOTE_SKIP);
     signal("voting");
@@ -349,8 +526,8 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   /* ----------------------------------------------------------- shortcuts */
 
   useShortcuts({
-    playpause: () => isHost && emit(EVENTS.CONTROL_PLAYPAUSE),
-    next: () => isHost && emit(EVENTS.CONTROL_SKIP),
+    playpause: () => isHost && playPause(),
+    next: () => isHost && skip(),
     prev: () => isHost && seekTo(Math.max(0, position - 10)),
     search: openSearch,
     queue: () => {
@@ -397,6 +574,58 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
 
   const currentLikes = current?.likes ?? [];
   const youLikeCurrent = currentLikes.includes(nick.trim());
+
+  if (kicked) {
+    return (
+      <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col items-center justify-center px-6">
+        <Panel className="w-full text-center">
+          <div className="mb-2 text-[11px] font-semibold tracking-eyebrow text-[var(--destructive)] uppercase">
+            Removed
+          </div>
+          <h1 className="mb-1 font-display text-2xl font-bold text-ink">
+            You were removed from this room
+          </h1>
+          <p className="text-sm text-muted">
+            The host removed you. You can try again later, or find another room.
+          </p>
+        </Panel>
+      </main>
+    );
+  }
+
+  if (denied) {
+    return (
+      <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col items-center justify-center px-6">
+        <Panel className="w-full text-center">
+          <div className="mb-2 text-[11px] font-semibold tracking-eyebrow text-[var(--destructive)] uppercase">
+            Not this time
+          </div>
+          <h1 className="mb-1 font-display text-2xl font-bold text-ink">
+            The host didn&rsquo;t let you in
+          </h1>
+          <p className="text-sm text-muted">This room is invite only.</p>
+        </Panel>
+      </main>
+    );
+  }
+
+  if (awaitingApproval) {
+    return (
+      <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col items-center justify-center px-6">
+        <Panel className="w-full text-center">
+          <div className="mb-2 text-[11px] font-semibold tracking-eyebrow text-[var(--accent-2)] uppercase">
+            Invite only
+          </div>
+          <h1 className="mb-1 font-display text-2xl font-bold text-ink">
+            Waiting for the host
+          </h1>
+          <p className="text-sm text-muted">
+            This room needs the host to let you in. Hang tight.
+          </p>
+        </Panel>
+      </main>
+    );
+  }
 
   if (!joined) {
     return (
@@ -449,7 +678,19 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
         style={current?.thumbnail ? { backgroundImage: `url(${current.thumbnail})` } : undefined}
         aria-hidden
       />
-      <audio ref={audioRef} onEnded={onEnded} onError={onAudioError} />
+      {/* Two elements so the one about to end can fade out while the next
+          fades in — `activeSlot` says which one the sync loop, and its
+          onEnded/onError, currently treats as authoritative. */}
+      <audio
+        ref={audioRef}
+        onEnded={activeSlot === "A" ? onEnded : undefined}
+        onError={activeSlot === "A" ? onAudioError : undefined}
+      />
+      <audio
+        ref={nextAudioRef}
+        onEnded={activeSlot === "B" ? onEnded : undefined}
+        onError={activeSlot === "B" ? onAudioError : undefined}
+      />
 
       <Reactions incoming={lastReaction} />
       {helpOpen && <ShortcutsDialog open onOpenChange={setHelpOpen} isHost={isHost} />}
@@ -519,8 +760,23 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
             <span className="font-mono text-xs font-bold tracking-[0.18em] text-ink">{code}</span>
           </span>
 
+          {isHost && pendingRequests.length > 0 && (
+            <PendingRequestsMenu
+              requests={pendingRequests}
+              onApprove={approveJoin}
+              onDeny={denyJoin}
+            />
+          )}
+
           {participants.length > 0 && (
-            <ParticipantsMenu list={participants} statuses={statuses} />
+            <ParticipantsMenu
+              list={participants}
+              statuses={statuses}
+              you={you}
+              isHost={isHost}
+              onMute={muteParticipant}
+              onKick={kickParticipant}
+            />
           )}
 
           <Button
@@ -694,6 +950,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
               onSend={sendChat}
               onTyping={onTyping}
               statuses={statuses}
+              muted={participants.find((p) => p.id === you)?.muted}
               className={cn(
                 pane === "chat" ? "max-md:flex max-md:flex-1" : "max-md:hidden",
                 "md:flex md:min-h-0 md:flex-1"
@@ -741,13 +998,16 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
         liked={youLikeCurrent}
         onLike={() => current?.id && likeTrack(current.id)}
         onVolume={changeVolume}
-        onPlayPause={() => emit(EVENTS.CONTROL_PLAYPAUSE)}
-        onSkip={() => emit(EVENTS.CONTROL_SKIP)}
+        onPlayPause={playPause}
+        onSkip={skip}
         onSeek={seekTo}
         onVoteSkip={voteSkip}
         onShuffle={() => emit(EVENTS.CONTROL_SHUFFLE)}
         onRepeat={() => emit(EVENTS.CONTROL_REPEAT)}
         onReact={react}
+        castSupported={casting.supported}
+        castConnected={casting.connected}
+        onCast={casting.prompt}
       />
     </div>
   );
@@ -851,15 +1111,80 @@ function TabBar({
 }
 
 /**
+ * Who's waiting to get in. Host-only, and only rendered at all when someone
+ * actually is — an invite-only room with nobody waiting shouldn't carry a
+ * permanent empty button in the header.
+ */
+function PendingRequestsMenu({
+  requests,
+  onApprove,
+  onDeny,
+}: {
+  requests: PendingRequest[];
+  onApprove: (id: string) => void;
+  onDeny: (id: string) => void;
+}) {
+  return (
+    <Popover
+      label={`${requests.length} waiting to join`}
+      width={264}
+      buttonClassName="relative flex items-center gap-1.5 rounded-full border border-[var(--accent)]/40 bg-accent-soft px-3 py-1.5 text-[var(--accent-2)] transition-colors duration-200 ease-[var(--ease)] hover:bg-[color-mix(in_oklab,var(--accent)_26%,transparent)]"
+      button={
+        <>
+          <UserPlus className="size-3.5" />
+          <span className="text-xs font-semibold">{requests.length}</span>
+        </>
+      }
+    >
+      <div className="sw-label mb-2 px-1 text-[10px]">Waiting to join ({requests.length})</div>
+      <ul className="sw-scroll max-h-72 space-y-1 overflow-y-auto">
+        {requests.map((r) => (
+          <li key={r.id} className="flex items-center gap-2 p-1.5">
+            <Avatar name={r.nick} size="sm" />
+            <span className="min-w-0 flex-1 truncate text-sm text-ink">{r.nick}</span>
+            <button
+              type="button"
+              onClick={() => onApprove(r.id)}
+              aria-label={`Let ${r.nick} in`}
+              title="Let in"
+              className="grid size-7 shrink-0 place-items-center rounded-full text-[var(--success)] transition-colors duration-200 ease-[var(--ease)] hover:bg-[var(--success)]/10"
+            >
+              <Check className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onDeny(r.id)}
+              aria-label={`Turn ${r.nick} away`}
+              title="Turn away"
+              className="grid size-7 shrink-0 place-items-center rounded-full text-[var(--destructive)] transition-colors duration-200 ease-[var(--ease)] hover:bg-[var(--destructive)]/10"
+            >
+              <X className="size-4" />
+            </button>
+          </li>
+        ))}
+      </ul>
+    </Popover>
+  );
+}
+
+/**
  * Who is here, as faces. The stack is the affordance and the list behind it is
  * the detail — a room of twelve is unreadable as twelve names in a top bar.
  */
 function ParticipantsMenu({
   list,
   statuses,
+  you,
+  isHost,
+  onMute,
+  onKick,
 }: {
   list: Participant[];
   statuses: Record<string, string>;
+  you: string | null;
+  isHost: boolean;
+  onMute: (id: string, muted: boolean) => void;
+  onKick: (id: string) => void;
 }) {
   return (
     <Popover
@@ -890,7 +1215,12 @@ function ParticipantsMenu({
                 <span className="truncate">{p.nick}</span>
               </summary>
               <div className="px-1 pb-2 pt-3">
-                <PresenceCard p={p} />
+                <PresenceCard
+                  p={p}
+                  canModerate={isHost && p.id !== you && !p.isHost}
+                  onMute={onMute}
+                  onKick={onKick}
+                />
               </div>
             </details>
           </li>

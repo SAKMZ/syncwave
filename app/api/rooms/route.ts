@@ -29,13 +29,15 @@ export async function POST(req: NextRequest) {
   }
 
   let name: string | undefined;
+  let inviteOnly: boolean | undefined;
   try {
     const body = await req.json();
     name = body?.name;
+    inviteOnly = Boolean(body?.inviteOnly);
   } catch {
     /* no body */
   }
-  const room = createRoom(name);
+  const room = createRoom(name, inviteOnly);
   return NextResponse.json({ code: room.code, ownerToken: room.ownerToken, name: room.name });
 }
 

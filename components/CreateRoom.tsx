@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Loader2, Radio } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 export default function CreateRoom() {
   const router = useRouter();
@@ -11,12 +12,18 @@ export default function CreateRoom() {
   const [code, setCode] = useState("");
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState("");
+  const [inviteOnly, setInviteOnly] = useState(false);
+  const inviteOnlyId = useId();
 
   async function start() {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch("/api/rooms", { method: "POST" });
+      const res = await fetch("/api/rooms", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ inviteOnly }),
+      });
       const body = await res.json().catch(() => null);
       // A refusal still returns JSON, and without this check the missing code
       // was pushed to the router as the string "undefined".
@@ -67,6 +74,19 @@ export default function CreateRoom() {
         {loading ? <Loader2 className="size-4 animate-spin" /> : <Radio className="size-4" />}
         {loading ? "Creating room…" : "Start a room"}
       </Button>
+
+      <label
+        htmlFor={inviteOnlyId}
+        className="flex w-full max-w-xs items-center justify-between gap-3 text-xs text-muted"
+      >
+        <span>
+          Invite only
+          <span className="block text-[11px] text-muted/70">
+            You approve each person before they can join
+          </span>
+        </span>
+        <Switch id={inviteOnlyId} checked={inviteOnly} onCheckedChange={setInviteOnly} />
+      </label>
 
       <div className="flex w-full max-w-xs items-center gap-3 text-[11px] font-semibold tracking-eyebrow text-muted/70 uppercase">
         <span className="h-px flex-1 bg-white/10" />

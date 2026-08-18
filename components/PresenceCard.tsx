@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Crown, ListPlus, MessageSquare } from "lucide-react";
+import { Crown, ListPlus, MessageCircleOff, MessageSquare, UserX } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { PRESENCE, since } from "@/lib/presence";
 import type { Participant } from "@/lib/types";
@@ -16,7 +16,18 @@ import { Popover } from "@/components/ui/popover";
  * collected for the card's sake, which is why there's no bio and no history of
  * what they've listened to elsewhere.
  */
-export function PresenceCard({ p }: { p: Participant }) {
+export function PresenceCard({
+  p,
+  canModerate = false,
+  onMute,
+  onKick,
+}: {
+  p: Participant;
+  /** Only the host, looking at someone else's card, ever sees the controls below. */
+  canModerate?: boolean;
+  onMute?: (id: string, muted: boolean) => void;
+  onKick?: (id: string) => void;
+}) {
   const presence = PRESENCE[p.status] ?? PRESENCE.listening;
 
   // Their three most-used reactions, biggest first. A person's reaction habit
@@ -73,6 +84,29 @@ export function PresenceCard({ p }: { p: Participant }) {
               </li>
             ))}
           </ul>
+        </div>
+      )}
+
+      {canModerate && (
+        <div className="flex gap-2 border-t border-white/8 pt-3">
+          <button
+            type="button"
+            onClick={() => onMute?.(p.id, !p.muted)}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-white/10 px-2 py-1.5 text-xs font-semibold text-ink/75 transition-colors duration-200 ease-[var(--ease)] hover:bg-white/8 hover:text-ink"
+          >
+            <MessageCircleOff className="size-3.5" />
+            {p.muted ? "Unmute" : "Mute"}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              if (confirm(`Remove ${p.nick} from this room?`)) onKick?.(p.id);
+            }}
+            className="flex flex-1 items-center justify-center gap-1.5 rounded-full border border-[var(--destructive)]/30 px-2 py-1.5 text-xs font-semibold text-[var(--destructive)] transition-colors duration-200 ease-[var(--ease)] hover:bg-[var(--destructive)]/10"
+          >
+            <UserX className="size-3.5" />
+            Remove
+          </button>
         </div>
       )}
     </div>

@@ -32,6 +32,7 @@ function ChatPanel({
   onSend,
   onTyping,
   statuses,
+  muted,
   className,
 }: {
   chat: ChatMsg[];
@@ -45,6 +46,8 @@ function ChatPanel({
   onSend: (text: string) => void;
   /** Fires as you write, so the room can show you're mid-sentence. */
   onTyping?: () => void;
+  /** The host has muted your chat — the room still shows, you just can't post. */
+  muted?: boolean;
   className?: string;
 }) {
   const [text, setText] = useState("");
@@ -164,41 +167,47 @@ function ChatPanel({
           </div>
         )}
 
-        <div className="flex items-center gap-2 rounded-full border border-input bg-field pl-4 pr-1.5 py-1.5 transition-[border-color,box-shadow] duration-200 ease-[var(--ease)] focus-within:border-[color:color-mix(in_oklab,var(--accent)_55%,transparent)] focus-within:shadow-[0_0_0_3px_color-mix(in_oklab,var(--accent)_18%,transparent)]">
-          <input
-            ref={inputRef}
-            className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted"
-            placeholder={aiDj ? "Say something · /dj <request>" : "Say something…"}
-            value={text}
-            maxLength={500}
-            onChange={(e) => {
-              setText(e.target.value);
-              // The hook deduplicates and decays this, so a whole sentence
-              // costs one packet rather than one per keystroke.
-              if (e.target.value) onTyping?.();
-            }}
-            onKeyDown={(e) => e.key === "Enter" && send()}
-            aria-label="Chat message"
-          />
-          <button
-            type="button"
-            onClick={() => setPickerOpen((v) => !v)}
-            aria-label="Emoji"
-            aria-expanded={pickerOpen}
-            className="grid size-8 shrink-0 place-items-center rounded-full text-muted transition-colors duration-200 ease-[var(--ease)] hover:bg-white/8 hover:text-ink"
-          >
-            <Smile className="size-4" />
-          </button>
-          <button
-            type="button"
-            onClick={send}
-            disabled={!text.trim()}
-            aria-label="Send"
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-[image:var(--accent-gradient)] text-white transition-[transform,box-shadow,opacity] duration-200 ease-[var(--ease)] hover:scale-105 hover:shadow-[var(--glow-accent)] active:scale-95 disabled:opacity-30 disabled:hover:scale-100 disabled:hover:shadow-none"
-          >
-            <Send className="size-3.5" />
-          </button>
-        </div>
+        {muted ? (
+          <div className="flex items-center justify-center rounded-full border border-white/8 bg-white/[0.03] px-4 py-2.5 text-center text-[13px] text-muted">
+            The host has muted your chat.
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-full border border-input bg-field pl-4 pr-1.5 py-1.5 transition-[border-color,box-shadow] duration-200 ease-[var(--ease)] focus-within:border-[color:color-mix(in_oklab,var(--accent)_55%,transparent)] focus-within:shadow-[0_0_0_3px_color-mix(in_oklab,var(--accent)_18%,transparent)]">
+            <input
+              ref={inputRef}
+              className="min-w-0 flex-1 bg-transparent text-[13px] text-ink outline-none placeholder:text-muted"
+              placeholder={aiDj ? "Say something · /dj <request>" : "Say something…"}
+              value={text}
+              maxLength={500}
+              onChange={(e) => {
+                setText(e.target.value);
+                // The hook deduplicates and decays this, so a whole sentence
+                // costs one packet rather than one per keystroke.
+                if (e.target.value) onTyping?.();
+              }}
+              onKeyDown={(e) => e.key === "Enter" && send()}
+              aria-label="Chat message"
+            />
+            <button
+              type="button"
+              onClick={() => setPickerOpen((v) => !v)}
+              aria-label="Emoji"
+              aria-expanded={pickerOpen}
+              className="grid size-8 shrink-0 place-items-center rounded-full text-muted transition-colors duration-200 ease-[var(--ease)] hover:bg-white/8 hover:text-ink"
+            >
+              <Smile className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={send}
+              disabled={!text.trim()}
+              aria-label="Send"
+              className="grid size-8 shrink-0 place-items-center rounded-full bg-[image:var(--accent-gradient)] text-white transition-[transform,box-shadow,opacity] duration-200 ease-[var(--ease)] hover:scale-105 hover:shadow-[var(--glow-accent)] active:scale-95 disabled:opacity-30 disabled:hover:scale-100 disabled:hover:shadow-none"
+            >
+              <Send className="size-3.5" />
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
