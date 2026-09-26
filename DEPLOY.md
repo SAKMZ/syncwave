@@ -268,7 +268,7 @@ systemctl list-timers syncwave-update.timer
 journalctl -u syncwave-update -n 50
 ```
 
-The unit files assume `/opt/apps/syncwave`; edit `WorkingDirectory` and
+The unit files assume `/opt/syncwave` (the installer's default); edit `WorkingDirectory` and
 `ExecStart` if you installed elsewhere. To stop auto-updating:
 `sudo systemctl disable --now syncwave-update.timer`.
 
