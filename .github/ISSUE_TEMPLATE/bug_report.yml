@@ -1,0 +1,53 @@
+name: Bug report
+description: Something isn't working the way it should.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. If tracks won't play at all, check "If tracks won't play" in [DEPLOY.md](https://github.com/SAKMZ/syncwave/blob/main/DEPLOY.md#if-tracks-wont-play) first; it covers the most common causes.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Create a room
+        2. Add a track
+        3. ...
+  - type: input
+    id: version
+    attributes:
+      label: Syncwave version
+      placeholder: "v1.1.1"
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How are you running it?
+      options:
+        - Desktop launcher (start.bat / start.sh)
+        - Docker
+        - Linux installer (install.sh)
+        - Railway or another cloud host
+        - npm run dev
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: "Chrome 128 on Android, Safari on iPhone 15..."
+  - type: textarea
+    id: logs
+    attributes:
+      label: Server logs
+      description: Anything relevant from the terminal or `docker compose logs`. Remove API keys and proxy credentials first.
+      render: text

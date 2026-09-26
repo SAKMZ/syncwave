@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or setup help
+    url: https://github.com/SAKMZ/syncwave/discussions
+    about: Ask in Discussions. Setup questions get answered faster there.
+  - name: Security vulnerability
+    url: https://github.com/SAKMZ/syncwave/security/advisories/new
+    about: Please report security problems privately.
