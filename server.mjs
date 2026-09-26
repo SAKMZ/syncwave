@@ -10,6 +10,7 @@ import { handleAudioRequest, sweepCache } from "./lib/resolver.mjs";
 import { ffmpegMissing } from "./lib/ffmpeg.mjs";
 import { jsRuntimeMissing } from "./lib/jsruntime.mjs";
 import { clearPublicUrl } from "./lib/publicurl.mjs";
+import { startYtdlpUpdates } from "./lib/ytdlp.mjs";
 
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "3000", 10);
@@ -44,6 +45,9 @@ clearPublicUrl();
 // Evict cache files not played within 72h — sweep at boot and hourly.
 sweepCache();
 setInterval(sweepCache, 60 * 60 * 1000);
+
+// An outdated yt-dlp fails every track with a 403. Keep it current.
+startYtdlpUpdates();
 
 server.listen(port, () => {
   console.log(`> Syncwave ready on http://localhost:${port} (${dev ? "dev" : "prod"})`);

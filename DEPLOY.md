@@ -383,6 +383,13 @@ room names which.
 
 **1. ffmpeg is missing.** See the note in Option A.
 
+**Every track fails with `HTTP Error 403: Forbidden`?** Check yt-dlp before
+blaming your IP. YouTube changes often, and an outdated yt-dlp gets a 403 on
+every download, even on a home connection. Syncwave updates it weekly and
+checks early after a 403 (look for `[yt-dlp]` in the logs), but you can force
+it: `node_modules/youtube-dl-exec/bin/yt-dlp -U`, or rebuild the Docker image.
+If tracks still fail on the newest version, read on.
+
 **2. You're being rate-limited (HTTP 429).** This happens on *any* connection,
 including a home one, if you queue a lot of tracks quickly — YouTube starts
 refusing requests and yt-dlp reports it as a bot-check. It is **temporary**:
@@ -455,6 +462,8 @@ Everything is optional. Copy `.env.example` to `.env` to change any of it.
 | `CACHE_DIR` | Downloaded audio (default `./cache`). |
 | `CACHE_MAX_MB` | Disk cap for cached audio (default `4096`). Least recently played evicted first; `0` disables the cap. |
 | `FFMPEG_PATH` | Path to a specific ffmpeg binary. Auto-detected otherwise. |
+| `YTDLP_AUTO_UPDATE` | Keep yt-dlp current by running `yt-dlp -U` (default `true`). Set `false` to manage it yourself. |
+| `YTDLP_UPDATE_DAYS` | Days between scheduled update checks (default `7`). A 403 also triggers an early check, at most every 6 hours. |
 | `YTDLP_COOKIES_FILE` | Path to a `cookies.txt`. Takes precedence over an upload and disables the upload button. |
 | `WEBSHARE_API_KEY` | Fetches a proxy pool from Webshare and refreshes it hourly. |
 | `YTDLP_PROXY_LIST` | Comma-separated proxy URLs, any provider. Used instead of the API key. |
