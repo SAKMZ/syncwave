@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Syncwave — listen to music together, in sync</title>
+  <meta name="description" content="A self-hosted Spotify Jam alternative. Start a room, share one link, and everyone hears the same second of the same song. Shared queue, chat, reactions and an optional AI DJ. No accounts, no Premium." />
+  <meta name="theme-color" content="#08090f" />
+  <link rel="canonical" href="https://syncwave.awetomiq.com/" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="/favicon.svg" />
+
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Syncwave" />
+  <meta property="og:url" content="https://syncwave.awetomiq.com/" />
+  <meta property="og:title" content="Syncwave — listen to music together, in sync" />
+  <meta property="og:description" content="A self-hosted Spotify Jam alternative. One link, everyone in sync. No accounts, no Premium." />
+  <meta property="og:image" content="https://syncwave.awetomiq.com/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:image" content="https://syncwave.awetomiq.com/og.png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #08090f;
+      --bg-2: #0b0c14;
+      --ink: #f2f2f8;
+      --ink-soft: #c9cad8;
+      --muted: #8a8ca4;
+      --line: rgba(255, 255, 255, 0.1);
+      --surface: rgba(21, 22, 34, 0.55);
+      --surface-border: rgba(255, 255, 255, 0.08);
+      --accent: #8b5cf6;
+      --accent-2: #c084fc;
+      --accent-3: #ff4d8d;
+      --gradient: linear-gradient(120deg, var(--accent), var(--accent-2) 55%, var(--accent-3));
+      --radius-sm: 12px;
+      --radius-md: 18px;
+      --radius-lg: 24px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      --font: "Sora", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+      --mono: ui-monospace, "SF Mono", "Cascadia Code", Consolas, monospace;
+      color-scheme: dark;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: var(--font);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    img, video { display: block; max-width: 100%; height: auto; }
+    a { color: inherit; }
+    :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 6px; }
+
+    /* The same soft glow the app sits on, so the two feel like one product. */
+    .aurora {
+      position: fixed; inset: -20vh 0 auto; height: 90vh; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(40% 50% at 20% 20%, rgba(139, 92, 246, 0.22), transparent 70%),
+        radial-gradient(35% 45% at 80% 10%, rgba(255, 77, 141, 0.14), transparent 70%),
+        radial-gradient(40% 40% at 60% 60%, rgba(192, 132, 252, 0.08), transparent 70%);
+      filter: blur(20px);
+    }
+
+    .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-left)); }
+
+    /* ---------------------------------------------------------------- nav */
+    header.nav {
+      position: sticky; top: 0; z-index: 10;
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      background: rgba(8, 9, 15, 0.7);
+      border-bottom: 1px solid var(--line);
+      padding-top: env(safe-area-inset-top);
+    }
+    .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; letter-spacing: -0.01em; }
+    .brand img { width: 28px; height: 28px; }
+    .nav-links { display: flex; align-items: center; gap: 24px; font-size: 14px; }
+    .nav-links a:not(.btn) { color: var(--muted); text-decoration: none; transition: color 0.2s var(--ease); }
+    .nav-links a:not(.btn):hover { color: var(--ink); }
+    @media (max-width: 640px) { .nav-links .hide-sm { display: none; } }
+
+    /* ------------------------------------------------------------ buttons */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      height: 44px; padding: 0 20px; border-radius: 999px;
+      font: 600 14px/1 var(--font); text-decoration: none; white-space: nowrap;
+      border: 1px solid transparent; cursor: pointer;
+      transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease), border-color 0.2s var(--ease);
+    }
+    .btn-primary { background: var(--gradient); color: #fff; box-shadow: 0 8px 30px -8px rgba(192, 132, 252, 0.55); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 36px -8px rgba(192, 132, 252, 0.7); }
+    .btn-ghost { background: rgba(255, 255, 255, 0.04); border-color: var(--surface-border); color: var(--ink); }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--line); }
+    .btn-sm { height: 36px; padding: 0 14px; font-size: 13px; }
+    .btn svg { width: 16px; height: 16px; flex: none; }
+
+    /* --------------------------------------------------------------- hero */
+    .hero { padding: 88px 0 56px; text-align: center; }
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--accent-2);
+      padding: 6px 14px; border-radius: 999px;
+      background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(192, 132, 252, 0.2);
+    }
+    h1 {
+      margin: 24px auto 0; max-width: 14ch;
+      font-size: clamp(40px, 7.5vw, 76px); line-height: 1.02; letter-spacing: -0.035em; font-weight: 800;
+    }
+    .grad { background: var(--gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
+    .lede { margin: 24px auto 0; max-width: 580px; font-size: clamp(16px, 2.2vw, 19px); color: var(--ink-soft); }
+    .cta { margin-top: 36px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+    .fine { margin-top: 16px; font-size: 13px; color: var(--muted); }
+
+    .shot {
+      margin: 64px auto 0; max-width: 1040px;
+      border-radius: var(--radius-lg); overflow: hidden;
+      border: 1px solid var(--surface-border);
+      background: var(--bg-2);
+      box-shadow: 0 40px 120px -30px rgba(139, 92, 246, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.02);
+    }
+    .shot img { width: 100%; }
+
+    /* ----------------------------------------------------------- sections */
+    section { padding: 96px 0; }
+    .section-head { max-width: 640px; margin-bottom: 48px; }
+    .section-head.center { margin-left: auto; margin-right: auto; text-align: center; }
+    .kicker { font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-2); }
+    h2 { margin: 12px 0 0; font-size: clamp(28px, 4.4vw, 42px); line-height: 1.1; letter-spacing: -0.025em; font-weight: 700; }
+    .section-head p { margin: 16px 0 0; color: var(--ink-soft); font-size: 17px; }
+
+    /* ------------------------------------------------------------ features */
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
+    .card {
+      padding: 24px; border-radius: var(--radius-md);
+      background: var(--surface); border: 1px solid var(--surface-border);
+      transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
+    }
+    .card:hover { border-color: rgba(192, 132, 252, 0.3); transform: translateY(-2px); }
+    .icon {
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      display: grid; place-items: center;
+      background: rgba(139, 92, 246, 0.12); color: var(--accent-2);
+    }
+    .icon svg { width: 20px; height: 20px; }
+    .card h3 { margin: 16px 0 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+    .card p { margin: 8px 0 0; font-size: 14.5px; color: var(--muted); }
+    p code { font: 0.9em var(--mono); color: var(--ink-soft); background: rgba(255, 255, 255, 0.06); padding: 1px 6px; border-radius: 6px; }
+
+    /* --------------------------------------------------------------- demo */
+    .demo { display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; align-items: center; }
+    @media (max-width: 900px) { .demo { grid-template-columns: 1fr; gap: 32px; } }
+    .demo video { width: 100%; border-radius: var(--radius-lg); border: 1px solid var(--surface-border); background: var(--bg-2); }
+    .demo ul { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+    .demo li { display: flex; gap: 12px; color: var(--ink-soft); font-size: 15px; }
+    .demo li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 10px; border-radius: 50%; background: var(--gradient); }
+
+    /* ------------------------------------------------------------ install */
+    .install { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    @media (max-width: 900px) { .install { grid-template-columns: minmax(0, 1fr); } }
+    .install .card { display: flex; flex-direction: column; min-width: 0; }
+    .install .card:hover { transform: none; }
+    .tag { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
+    .install h3 { margin-top: 8px; }
+    .install p { flex: 1; }
+    .code {
+      position: relative; margin-top: 16px;
+      border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--surface-border);
+    }
+    .code pre {
+      margin: 0; padding: 14px 48px 14px 14px; overflow-x: auto;
+      font: 12.5px/1.7 var(--mono); color: var(--ink-soft); white-space: pre;
+    }
+    .copy {
+      position: absolute; top: 8px; right: 8px; width: 30px; height: 30px;
+      display: grid; place-items: center; border-radius: 8px; cursor: pointer;
+      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--surface-border); color: var(--muted);
+      transition: color 0.2s var(--ease), background 0.2s var(--ease);
+    }
+    .copy:hover { color: var(--ink); background: rgba(255, 255, 255, 0.1); }
+    .copy svg { width: 14px; height: 14px; }
+    .copy.done { color: #4ade80; }
+    .install .btn { margin-top: 16px; align-self: flex-start; }
+    .note {
+      margin-top: 24px; padding: 16px 20px; border-radius: var(--radius-md);
+      background: rgba(139, 92, 246, 0.06); border: 1px solid rgba(192, 132, 252, 0.15);
+      font-size: 14px; color: var(--ink-soft);
+    }
+    .note strong { color: var(--ink); }
+    .note a { color: var(--accent-2); }
+
+    /* ---------------------------------------------------------------- faq */
+    .faq { max-width: 760px; margin: 0 auto; }
+    details { border-bottom: 1px solid var(--line); }
+    summary {
+      list-style: none; cursor: pointer; padding: 20px 0;
+      display: flex; justify-content: space-between; align-items: center; gap: 16px;
+      font-weight: 600; font-size: 16px;
+    }
+    summary::-webkit-details-marker { display: none; }
+    summary::after { content: "+"; font-size: 22px; font-weight: 400; color: var(--muted); transition: transform 0.2s var(--ease); }
+    details[open] summary::after { transform: rotate(45deg); }
+    details p { margin: 0 0 20px; color: var(--muted); font-size: 15px; }
+    details a { color: var(--accent-2); }
+
+    /* -------------------------------------------------------------- final */
+    .final {
+      text-align: center; padding: 72px 24px; border-radius: var(--radius-lg);
+      background:
+        radial-gradient(60% 80% at 50% 0%, rgba(139, 92, 246, 0.25), transparent 70%),
+        var(--surface);
+      border: 1px solid var(--surface-border);
+    }
+    .final p { margin: 16px auto 0; max-width: 520px; color: var(--ink-soft); }
+
+    /* ------------------------------------------------------------- footer */
+    footer { border-top: 1px solid var(--line); padding: 40px 0 calc(40px + env(safe-area-inset-bottom)); }
+    .foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 24px; }
+    .foot nav { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; }
+    .foot nav a { color: var(--muted); text-decoration: none; transition: color 0.2s var(--ease); }
+    .foot nav a:hover { color: var(--ink); }
+    .small { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 12px; color: rgba(138, 140, 164, 0.75); }
+    .small a { color: var(--muted); text-decoration: none; }
+    .small a:hover { color: var(--ink); }
+    .studio { font-weight: 600; letter-spacing: 0.14em; }
+
+    @media (max-width: 600px) {
+      .hero { padding: 56px 0 40px; }
+      section { padding: 72px 0; }
+      .shot { margin-top: 40px; border-radius: var(--radius-md); }
+      .cta .btn { flex: 1 1 100%; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition: none !important; animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"></div>
+
+  <header class="nav">
+    <div class="wrap">
+      <a class="brand" href="#top" aria-label="Syncwave home">
+        <img src="/assets/logo.svg" alt="" width="28" height="28" />
+        Syncwave
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="hide-sm" href="#features">Features</a>
+        <a class="hide-sm" href="#install">Self-host</a>
+        <a class="hide-sm" href="#faq">FAQ</a>
+        <a class="btn btn-ghost btn-sm" href="https://github.com/SAKMZ/syncwave" rel="noopener">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ================================================================ hero -->
+    <div class="wrap hero">
+      <span class="eyebrow">Self-hosted · Free for personal use</span>
+      <h1>Listen together, <span class="grad">in perfect sync.</span></h1>
+      <p class="lede">
+        Start a room, send one link, and everyone hears the same second of the same song.
+        A shared queue, live chat and reactions, with no accounts and no Premium.
+        It runs on a computer you already own.
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary" href="#install">Run your own</a>
+        <a class="btn btn-ghost" href="https://github.com/SAKMZ/syncwave" rel="noopener">View the source</a>
+      </div>
+      <p class="fine">Windows, macOS, Linux or Docker. Takes about five minutes.</p>
+
+      <div class="shot">
+        <img
+          src="/assets/demo-loop.webp"
+          width="900" height="488"
+          alt="A Syncwave room changing tracks. The queue fills with songs the AI DJ picked, a second listener chats alongside, and the whole room re-tints to match the new album art."
+        />
+      </div>
+    </div>
+
+    <!-- ============================================================ features -->
+    <section id="features">
+      <div class="wrap">
+        <div class="section-head">
+          <div class="kicker">What's in a room</div>
+          <h2>Everything a listening party needs, nothing it doesn't.</h2>
+          <p>Think house party, long-distance date night, study room, or the music channel of your Discord, except everyone hears it at full quality and can actually run the queue.</p>
+        </div>
+
+        <div class="grid">
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
+            <h3>Playback that stays locked</h3>
+            <p>The server keeps the clock and every listener follows it. Nobody drifts, and a laptop waking from sleep catches up instead of dragging the room back.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
+            <h3>One link, no sign-ups</h3>
+            <p>Share a code or a URL. Friends pick a name and they're in. Rooms survive restarts, so a link can stay your group's spot for good.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h13M3 12h13M3 18h9"/><path d="M19 15v6M16 18h6"/></svg></div>
+            <h3>A queue people can share</h3>
+            <p>Anyone can add. Upvotes move a track one place per person, so one enthusiast can't take over. Drag to reorder, vote to skip, and see who added what.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></div>
+            <h3>Chat, reactions, presence</h3>
+            <p>See who's typing, queueing or away. Emoji reactions burst identically on every screen, and joins and skips go to their own feed so they don't bury the chat.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div>
+            <h3>An optional AI DJ</h3>
+            <p>Type <code>/dj ten rainy-day songs</code> in chat and it fills the queue, then introduces tracks in character. Works with a free Gemini key or a local Ollama. Off by default.</p>
+          </article>
+          <article class="card">
+            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></div>
+            <h3>Made for phones</h3>
+            <p>Swipeable panes, lock-screen controls, and installable to the home screen. Crossfade, volume levelling and casting to your speakers are built in.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================ demo -->
+    <section style="padding-top: 0">
+      <div class="wrap demo">
+        <video
+          controls
+          preload="none"
+          playsinline
+          poster="/assets/demo-poster.jpg"
+          width="1706" height="926"
+          aria-label="Two minutes of a Syncwave room, unedited"
+        >
+          <source src="/assets/demo.mp4" type="video/mp4" />
+        </video>
+        <div>
+          <div class="kicker">See it running</div>
+          <h2>Two minutes, unedited.</h2>
+          <ul>
+            <li>A line in chat becomes ten queued tracks and a spoken intro.</li>
+            <li>A second listener joins, talks, and hears exactly what you hear.</li>
+            <li>The whole room takes its colour from the album art and changes with the music.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================= install -->
+    <section id="install">
+      <div class="wrap">
+        <div class="section-head center">
+          <div class="kicker">Run your own</div>
+          <h2>Your server, your music, your rules.</h2>
+          <p>There's no hosted service to sign up for. Syncwave runs on your machine, and your friends connect to it.</p>
+        </div>
+
+        <div class="install">
+          <article class="card">
+            <span class="tag">Easiest</span>
+            <h3>Double-click it</h3>
+            <p>Download, unzip, and run <code>start.bat</code> on Windows or <code>start.sh</code> on macOS and Linux. It fetches what it needs, opens your browser, and prints a public link you can send to anyone.</p>
+            <a class="btn btn-primary btn-sm" href="https://github.com/SAKMZ/syncwave/releases/latest" rel="noopener">Download the latest release</a>
+          </article>
+
+          <article class="card">
+            <span class="tag">Always-on box</span>
+            <h3>Docker</h3>
+            <p>For a home server or a NAS that stays on.</p>
+            <div class="code">
+              <pre><code>git clone https://github.com/SAKMZ/syncwave.git
+cd syncwave && cp .env.example .env
+docker compose up -d --build</code></pre>
+              <button class="copy" type="button" aria-label="Copy Docker commands"></button>
+            </div>
+          </article>
+
+          <article class="card">
+            <span class="tag">Linux server</span>
+            <h3>One command</h3>
+            <p>Installs everything on Ubuntu or Debian. Add a domain and it sets up HTTPS for you.</p>
+            <div class="code">
+              <pre><code>curl -fsSL https://raw.githubusercontent.com/SAKMZ/syncwave/main/scripts/install.sh | sudo bash</code></pre>
+              <button class="copy" type="button" aria-label="Copy install command"></button>
+            </div>
+          </article>
+        </div>
+
+        <p class="note">
+          <strong>Hosting on a cloud VPS?</strong> YouTube refuses most datacenter IPs, so you'll need a proxy pool or a cookies file.
+          It's one setting in the admin console, and the <a href="https://github.com/SAKMZ/syncwave/blob/main/DEPLOY.md" rel="noopener">self-host guide</a> walks through it.
+        </p>
+      </div>
+    </section>
+
+    <!-- ================================================================= faq -->
+    <section id="faq" style="padding-top: 0">
+      <div class="wrap">
+        <div class="section-head center">
+          <div class="kicker">Questions</div>
+          <h2>The ones people actually ask.</h2>
+        </div>
+        <div class="faq">
+          <details>
+            <summary>Does everyone need Spotify, or Premium?</summary>
+            <p>No. Nobody needs an account with anything. Audio is fetched by your server and streamed from it, so listeners just open a link.</p>
+          </details>
+          <details>
+            <summary>How many people can join a room?</summary>
+            <p>There's no built-in cap. The real limit is your upload speed, since each listener streams from your machine. A group of friends on a home connection is comfortable.</p>
+          </details>
+          <details>
+            <summary>Can I use it alongside Discord?</summary>
+            <p>That's the most common setup: voice in Discord, music in a Syncwave room. Unlike a music bot, everyone hears full quality and can queue, vote and see what's playing.</p>
+          </details>
+          <details>
+            <summary>Do I have to pay for the AI DJ?</summary>
+            <p>No. Run it on your own machine with Ollama and no key at all, or use a free Gemini key from Google. It's off until you turn it on, and your key never leaves your server.</p>
+          </details>
+          <details>
+            <summary>Where does the music come from?</summary>
+            <p>YouTube Music, fetched with yt-dlp and cached on your disk. Syncwave is a self-host tool for you and your friends; please don't run it as a public or paid service.</p>
+          </details>
+          <details>
+            <summary>Is it free?</summary>
+            <p>Free to run, fork and change for personal, hobby and nonprofit use, under the <a href="https://github.com/SAKMZ/syncwave/blob/main/LICENSE" rel="noopener">PolyForm Noncommercial license</a>. Selling access or bundling it into a paid product needs a separate agreement. <a href="mailto:hello@awetomiq.com">Get in touch</a> if that's you.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+
+    <!-- =============================================================== final -->
+    <section style="padding-top: 0">
+      <div class="wrap">
+        <div class="final">
+          <h2>Press play for everyone.</h2>
+          <p>Set it up once, share the link, and the room is yours for as long as you want it.</p>
+          <div class="cta">
+            <a class="btn btn-primary" href="#install">Get started</a>
+            <a class="btn btn-ghost" href="https://github.com/SAKMZ/syncwave" rel="noopener">Star on GitHub</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="wrap">
+      <div class="foot">
+        <a class="brand" href="#top">
+          <img src="/assets/logo.svg" alt="" width="24" height="24" />
+          Syncwave
+        </a>
+        <nav aria-label="Footer">
+          <a href="https://github.com/SAKMZ/syncwave" rel="noopener">GitHub</a>
+          <a href="https://github.com/SAKMZ/syncwave/blob/main/DEPLOY.md" rel="noopener">Self-host guide</a>
+          <a href="https://github.com/SAKMZ/syncwave/releases" rel="noopener">Releases</a>
+          <a href="https://github.com/SAKMZ/syncwave/blob/main/LICENSE" rel="noopener">License</a>
+        </nav>
+      </div>
+      <p class="small">
+        © <span id="year">2026</span> Syncwave · Built by
+        <a class="studio" href="https://awetomiq.com" rel="noopener">AWETOMIQ</a> ·
+        <a href="mailto:hello@awetomiq.com">hello@awetomiq.com</a> ·
+        Not affiliated with Spotify or YouTube.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    document.getElementById("year").textContent = new Date().getFullYear();
+
+    const copyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
+    const doneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+
+    for (const btn of document.querySelectorAll(".copy")) {
+      btn.innerHTML = copyIcon;
+      btn.addEventListener("click", async () => {
+        const text = btn.parentElement.querySelector("code").textContent;
+        try {
+          await navigator.clipboard.writeText(text);
+          btn.innerHTML = doneIcon;
+          btn.classList.add("done");
+          setTimeout(() => { btn.innerHTML = copyIcon; btn.classList.remove("done"); }, 1600);
+        } catch {
+          // Clipboard blocked (insecure context, permissions): select the text instead.
+          const range = document.createRange();
+          range.selectNodeContents(btn.parentElement.querySelector("pre"));
+          const sel = getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+      });
+    }
+  </script>
+</body>
+</html>

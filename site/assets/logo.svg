@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Same mark as components/Logo.tsx: five bars, tallest in the middle, on a
+       tile in the accent ramp (violet to orchid to pink, matching the
+       accent-gradient token). The previous icon had a cyan stop in the middle,
+       which is the one colour the palette rules out, and drew the bars in the
+       gradient on a near-black tile: at 16px in a browser tab that read as a
+       dark smudge. Solid tile, white bars, legible at favicon size.
+       No double hyphens in here; it breaks strict XML parsers. -->
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8b5cf6"/>
+      <stop offset="0.55" stop-color="#c084fc"/>
+      <stop offset="1" stop-color="#ff4d8d"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#g)"/>
+  <g fill="#ffffff">
+    <rect x="88"  y="192" width="48" height="128" rx="24"/>
+    <rect x="168" y="144" width="48" height="224" rx="24"/>
+    <rect x="248" y="96"  width="48" height="320" rx="24"/>
+    <rect x="328" y="152" width="48" height="208" rx="24"/>
+    <rect x="408" y="200" width="48" height="112" rx="24"/>
+  </g>
+</svg>

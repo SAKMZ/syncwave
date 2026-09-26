@@ -8,3 +8,4 @@ _reference
 .env
 .env.local
 *.log
+site
