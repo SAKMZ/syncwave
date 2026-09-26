@@ -5,9 +5,19 @@ Full notes for each release are on the [releases page](https://github.com/SAKMZ/
 
 ## Unreleased
 
+## 1.2.0 · 2026-09-26
+
+### Added
+- yt-dlp keeps itself up to date: checked at boot when due, weekly after that, and early after a 403. An outdated yt-dlp fails every track with `HTTP Error 403`, which looks like an IP block but usually isn't. Turn off with `YTDLP_AUTO_UPDATE=false`.
+- A 403 now tells the room it's most likely an outdated yt-dlp being updated, instead of a raw yt-dlp error.
 - Project website at [syncwave.awetomiq.com](https://syncwave.awetomiq.com), built from `site/`.
-- The nightly update timer now points at `/opt/syncwave`, the installer's default, instead of a path from an old deployment.
-- Contributor docs: `CONTRIBUTING.md`, `SECURITY.md`, a code of conduct, and issue and PR templates.
+- Contributor docs: `CONTRIBUTING.md`, `SECURITY.md`, a code of conduct, issue and PR templates, and `docs/FAQ.md`.
+
+### Fixed
+- The nightly update timer pointed at `/opt/apps/syncwave`, a path from an old deployment. It now uses `/opt/syncwave`, the installer's default.
+
+### Changed
+- A shorter README with fresh screenshots.
 
 ## 1.1.1 · 2026-08-18
 
