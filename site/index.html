@@ -3,17 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <title>Syncwave — listen to music together, in sync</title>
+  <title>Syncwave · Listen to music together, in sync</title>
   <meta name="description" content="A self-hosted Spotify Jam alternative. Start a room, share one link, and everyone hears the same second of the same song. Shared queue, chat, reactions and an optional AI DJ. No accounts, no Premium." />
   <meta name="theme-color" content="#08090f" />
   <link rel="canonical" href="https://syncwave.awetomiq.com/" />
   <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-  <link rel="apple-touch-icon" href="/favicon.svg" />
+  <link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Syncwave" />
   <meta property="og:url" content="https://syncwave.awetomiq.com/" />
-  <meta property="og:title" content="Syncwave — listen to music together, in sync" />
+  <meta property="og:title" content="Syncwave · Listen to music together, in sync" />
   <meta property="og:description" content="A self-hosted Spotify Jam alternative. One link, everyone in sync. No accounts, no Premium." />
   <meta property="og:image" content="https://syncwave.awetomiq.com/og.png" />
   <meta property="og:image:width" content="1200" />
@@ -21,23 +22,42 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:image" content="https://syncwave.awetomiq.com/og.png" />
 
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Syncwave",
+      "applicationCategory": "MultimediaApplication",
+      "operatingSystem": "Windows, macOS, Linux, Docker",
+      "description": "A self-hosted Spotify Jam alternative: synced listening rooms with a shared queue, chat and an optional AI DJ.",
+      "url": "https://syncwave.awetomiq.com/",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+      "author": { "@type": "Organization", "name": "AWETOMIQ", "url": "https://awetomiq.com" }
+    }
+  </script>
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="preload" as="image" href="/assets/room-1600.webp" imagesrcset="/assets/room-960.webp 960w, /assets/room-1600.webp 1600w, /assets/room-2400.webp 2400w" imagesizes="(max-width: 1120px) 100vw, 1080px" />
+
+  <script>document.documentElement.classList.add("js");</script>
 
   <style>
     :root {
       --bg: #08090f;
-      --bg-2: #0b0c14;
+      --bg-2: #0c0d16;
       --ink: #f2f2f8;
       --ink-soft: #c9cad8;
-      --muted: #8a8ca4;
-      --line: rgba(255, 255, 255, 0.1);
-      --surface: rgba(21, 22, 34, 0.55);
-      --surface-border: rgba(255, 255, 255, 0.08);
+      --muted: #9496ad;
+      --faint: #6b6d85;
+      --line: rgba(255, 255, 255, 0.09);
+      --surface: rgba(20, 21, 33, 0.6);
+      --surface-border: rgba(255, 255, 255, 0.075);
       --accent: #8b5cf6;
       --accent-2: #c084fc;
       --accent-3: #ff4d8d;
+      --success: #4ade80;
       --gradient: linear-gradient(120deg, var(--accent), var(--accent-2) 55%, var(--accent-3));
       --radius-sm: 12px;
       --radius-md: 18px;
@@ -49,7 +69,7 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; }
-    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; scroll-padding-top: 80px; overflow-x: clip; }
     body {
       margin: 0;
       background: var(--bg);
@@ -62,210 +82,312 @@
     img, video { display: block; max-width: 100%; height: auto; }
     a { color: inherit; }
     :focus-visible { outline: 2px solid var(--accent-2); outline-offset: 3px; border-radius: 6px; }
+    ::selection { background: rgba(192, 132, 252, 0.35); }
 
-    /* The same soft glow the app sits on, so the two feel like one product. */
-    .aurora {
-      position: fixed; inset: -20vh 0 auto; height: 90vh; z-index: -1; pointer-events: none;
-      background:
-        radial-gradient(40% 50% at 20% 20%, rgba(139, 92, 246, 0.22), transparent 70%),
-        radial-gradient(35% 45% at 80% 10%, rgba(255, 77, 141, 0.14), transparent 70%),
-        radial-gradient(40% 40% at 60% 60%, rgba(192, 132, 252, 0.08), transparent 70%);
-      filter: blur(20px);
+    .aurora { position: absolute; inset: 0 0 auto; height: 1100px; z-index: -1; pointer-events: none; overflow: hidden; }
+    .aurora::before, .aurora::after { content: ""; position: absolute; border-radius: 50%; filter: blur(90px); }
+    .aurora::before { width: 720px; height: 520px; left: 50%; top: -220px; transform: translateX(-75%); background: rgba(139, 92, 246, 0.28); }
+    .aurora::after { width: 560px; height: 420px; left: 50%; top: -160px; transform: translateX(5%); background: rgba(255, 77, 141, 0.16); }
+    .grid-bg {
+      position: absolute; inset: 0 0 auto; height: 900px; z-index: -1; pointer-events: none;
+      background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+      background-size: 64px 64px;
+      mask-image: radial-gradient(60% 55% at 50% 0%, #000 20%, transparent 75%);
+      -webkit-mask-image: radial-gradient(60% 55% at 50% 0%, #000 20%, transparent 75%);
+      opacity: 0.45;
     }
 
-    .wrap { width: 100%; max-width: 1120px; margin: 0 auto; padding: 0 max(16px, env(safe-area-inset-left)); }
+    .wrap { width: 100%; max-width: 1140px; margin: 0 auto; padding: 0 max(20px, env(safe-area-inset-left)); }
 
-    /* ---------------------------------------------------------------- nav */
+    /* ------------------------------------------------------------------ nav */
     header.nav {
-      position: sticky; top: 0; z-index: 10;
-      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-      background: rgba(8, 9, 15, 0.7);
-      border-bottom: 1px solid var(--line);
+      position: sticky; top: 0; z-index: 20;
       padding-top: env(safe-area-inset-top);
+      transition: background 0.3s var(--ease), border-color 0.3s var(--ease);
+      border-bottom: 1px solid transparent;
     }
-    .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 64px; gap: 16px; }
-    .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; letter-spacing: -0.01em; }
-    .brand img { width: 28px; height: 28px; }
-    .nav-links { display: flex; align-items: center; gap: 24px; font-size: 14px; }
+    header.nav.scrolled {
+      background: rgba(8, 9, 15, 0.72);
+      backdrop-filter: blur(16px) saturate(140%); -webkit-backdrop-filter: blur(16px) saturate(140%);
+      border-bottom-color: var(--line);
+    }
+    .nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 68px; gap: 16px; }
+    .brand { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-weight: 700; font-size: 17px; letter-spacing: -0.01em; }
+    .brand img { width: 30px; height: 30px; }
+    .nav-links { display: flex; align-items: center; gap: 28px; font-size: 14px; }
     .nav-links a:not(.btn) { color: var(--muted); text-decoration: none; transition: color 0.2s var(--ease); }
     .nav-links a:not(.btn):hover { color: var(--ink); }
-    @media (max-width: 640px) { .nav-links .hide-sm { display: none; } }
+    @media (max-width: 760px) { .nav-links .hide-sm { display: none; } }
 
-    /* ------------------------------------------------------------ buttons */
+    /* -------------------------------------------------------------- buttons */
     .btn {
       display: inline-flex; align-items: center; justify-content: center; gap: 8px;
-      height: 44px; padding: 0 20px; border-radius: 999px;
-      font: 600 14px/1 var(--font); text-decoration: none; white-space: nowrap;
+      height: 46px; padding: 0 22px; border-radius: 999px;
+      font: 600 14.5px/1 var(--font); text-decoration: none; white-space: nowrap;
       border: 1px solid transparent; cursor: pointer;
       transition: transform 0.2s var(--ease), box-shadow 0.2s var(--ease), background 0.2s var(--ease), border-color 0.2s var(--ease);
     }
-    .btn-primary { background: var(--gradient); color: #fff; box-shadow: 0 8px 30px -8px rgba(192, 132, 252, 0.55); }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 36px -8px rgba(192, 132, 252, 0.7); }
-    .btn-ghost { background: rgba(255, 255, 255, 0.04); border-color: var(--surface-border); color: var(--ink); }
-    .btn-ghost:hover { background: rgba(255, 255, 255, 0.08); border-color: var(--line); }
-    .btn-sm { height: 36px; padding: 0 14px; font-size: 13px; }
-    .btn svg { width: 16px; height: 16px; flex: none; }
+    .btn-primary { background: var(--gradient); color: #fff; box-shadow: 0 10px 32px -10px rgba(192, 132, 252, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 14px 40px -10px rgba(192, 132, 252, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
+    .btn-ghost { background: rgba(255, 255, 255, 0.045); border-color: var(--surface-border); color: var(--ink); }
+    .btn-ghost:hover { background: rgba(255, 255, 255, 0.08); border-color: rgba(255, 255, 255, 0.14); }
+    .btn-sm { height: 38px; padding: 0 16px; font-size: 13.5px; }
+    .btn svg { width: 17px; height: 17px; flex: none; }
 
-    /* --------------------------------------------------------------- hero */
-    .hero { padding: 88px 0 56px; text-align: center; }
-    .eyebrow {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-size: 12px; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase;
-      color: var(--accent-2);
-      padding: 6px 14px; border-radius: 999px;
-      background: rgba(139, 92, 246, 0.1); border: 1px solid rgba(192, 132, 252, 0.2);
+    /* ----------------------------------------------------------------- hero */
+    .hero { padding-top: 72px; text-align: center; position: relative; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 10px; max-width: 100%;
+      font-size: 13px; font-weight: 500; color: var(--ink-soft); text-decoration: none;
+      padding: 6px 14px 6px 6px; border-radius: 999px;
+      background: rgba(255, 255, 255, 0.04); border: 1px solid var(--surface-border);
+      transition: border-color 0.2s var(--ease);
     }
+    .pill:hover { border-color: rgba(192, 132, 252, 0.35); }
+    .pill b { font-weight: 600; font-size: 11.5px; letter-spacing: 0.06em; color: #fff; background: var(--gradient); padding: 3px 9px; border-radius: 999px; flex: none; }
+    .pill svg { width: 14px; height: 14px; color: var(--muted); flex: none; }
     h1 {
-      margin: 24px auto 0; max-width: 14ch;
-      font-size: clamp(40px, 7.5vw, 76px); line-height: 1.02; letter-spacing: -0.035em; font-weight: 800;
+      margin: 28px auto 0; max-width: 15ch;
+      font-size: clamp(42px, 7.2vw, 80px); line-height: 1.02; letter-spacing: -0.04em; font-weight: 800;
+      text-wrap: balance;
     }
     .grad { background: var(--gradient); -webkit-background-clip: text; background-clip: text; color: transparent; }
-    .lede { margin: 24px auto 0; max-width: 580px; font-size: clamp(16px, 2.2vw, 19px); color: var(--ink-soft); }
+    .lede { margin: 24px auto 0; max-width: 600px; font-size: clamp(16.5px, 2.1vw, 19px); color: var(--ink-soft); text-wrap: pretty; }
     .cta { margin-top: 36px; display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
-    .fine { margin-top: 16px; font-size: 13px; color: var(--muted); }
+    .trust { margin: 22px auto 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 18px; font-size: 13px; color: var(--muted); list-style: none; padding: 0; }
+    .trust li { display: inline-flex; align-items: center; gap: 7px; }
+    .trust svg { width: 14px; height: 14px; color: var(--accent-2); }
 
-    .shot {
-      margin: 64px auto 0; max-width: 1040px;
-      border-radius: var(--radius-lg); overflow: hidden;
-      border: 1px solid var(--surface-border);
-      background: var(--bg-2);
-      box-shadow: 0 40px 120px -30px rgba(139, 92, 246, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.02);
+    /* Browser-window frame around the product shot. */
+    .frame {
+      position: relative; margin: 64px auto 0; max-width: 1080px;
+      border-radius: 16px; padding: 1px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.03) 40%);
+      box-shadow: 0 50px 140px -40px rgba(139, 92, 246, 0.55), 0 30px 60px -30px rgba(0, 0, 0, 0.8);
     }
-    .shot img { width: 100%; }
-
-    /* ----------------------------------------------------------- sections */
-    section { padding: 96px 0; }
-    .section-head { max-width: 640px; margin-bottom: 48px; }
-    .section-head.center { margin-left: auto; margin-right: auto; text-align: center; }
-    .kicker { font-size: 12px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: var(--accent-2); }
-    h2 { margin: 12px 0 0; font-size: clamp(28px, 4.4vw, 42px); line-height: 1.1; letter-spacing: -0.025em; font-weight: 700; }
-    .section-head p { margin: 16px 0 0; color: var(--ink-soft); font-size: 17px; }
-
-    /* ------------------------------------------------------------ features */
-    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-    @media (max-width: 900px) { .grid { grid-template-columns: repeat(2, 1fr); } }
-    @media (max-width: 600px) { .grid { grid-template-columns: 1fr; } }
-    .card {
-      padding: 24px; border-radius: var(--radius-md);
-      background: var(--surface); border: 1px solid var(--surface-border);
-      transition: border-color 0.2s var(--ease), transform 0.2s var(--ease);
+    .frame::before {
+      content: ""; position: absolute; inset: -60px 0 auto; height: 280px; z-index: -1;
+      background: radial-gradient(50% 60% at 50% 50%, rgba(192, 132, 252, 0.25), transparent 70%);
+      filter: blur(30px);
     }
-    .card:hover { border-color: rgba(192, 132, 252, 0.3); transform: translateY(-2px); }
-    .icon {
-      width: 40px; height: 40px; border-radius: var(--radius-sm);
-      display: grid; place-items: center;
-      background: rgba(139, 92, 246, 0.12); color: var(--accent-2);
+    .frame-inner { border-radius: 15px; overflow: hidden; background: var(--bg-2); }
+    .chrome { display: flex; align-items: center; gap: 14px; height: 38px; padding: 0 14px; background: rgba(255, 255, 255, 0.03); border-bottom: 1px solid var(--line); }
+    .dots { display: flex; gap: 7px; }
+    .dots i { width: 11px; height: 11px; border-radius: 50%; background: rgba(255, 255, 255, 0.12); }
+    .url {
+      flex: 1; max-width: 380px; margin: 0 auto; height: 24px; border-radius: 7px;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      font-size: 11.5px; color: var(--muted); background: rgba(255, 255, 255, 0.04);
     }
-    .icon svg { width: 20px; height: 20px; }
-    .card h3 { margin: 16px 0 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
-    .card p { margin: 8px 0 0; font-size: 14.5px; color: var(--muted); }
-    p code { font: 0.9em var(--mono); color: var(--ink-soft); background: rgba(255, 255, 255, 0.06); padding: 1px 6px; border-radius: 6px; }
+    .url svg { width: 11px; height: 11px; }
+    .chrome .spacer { width: 47px; }
+    @media (max-width: 600px) { .chrome .spacer, .url { display: none; } .chrome { height: 28px; } .dots i { width: 8px; height: 8px; } }
 
-    /* --------------------------------------------------------------- demo */
-    .demo { display: grid; grid-template-columns: 1.35fr 1fr; gap: 48px; align-items: center; }
-    @media (max-width: 900px) { .demo { grid-template-columns: 1fr; gap: 32px; } }
-    .demo video { width: 100%; border-radius: var(--radius-lg); border: 1px solid var(--surface-border); background: var(--bg-2); }
-    .demo ul { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 14px; }
-    .demo li { display: flex; gap: 12px; color: var(--ink-soft); font-size: 15px; }
-    .demo li::before { content: ""; flex: none; width: 6px; height: 6px; margin-top: 10px; border-radius: 50%; background: var(--gradient); }
+    /* ------------------------------------------------------------- sections */
+    section { padding: 120px 0; position: relative; }
+    .head { max-width: 660px; margin-bottom: 56px; }
+    .head.center { margin-left: auto; margin-right: auto; text-align: center; }
+    .kicker { display: inline-block; font-size: 12.5px; font-weight: 600; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent-2); }
+    h2 { margin: 14px 0 0; font-size: clamp(30px, 4.4vw, 46px); line-height: 1.08; letter-spacing: -0.03em; font-weight: 700; text-wrap: balance; }
+    .head p { margin: 18px 0 0; color: var(--ink-soft); font-size: 17.5px; text-wrap: pretty; }
 
-    /* ------------------------------------------------------------ install */
+    /* ---------------------------------------------------------------- bento */
+    .bento { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 16px; }
+    .tile {
+      position: relative; overflow: hidden; min-width: 0;
+      border-radius: var(--radius-lg); background: var(--surface); border: 1px solid var(--surface-border);
+      padding: 28px; display: flex; flex-direction: column;
+    }
+    .tile::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: radial-gradient(80% 60% at 0% 0%, rgba(139, 92, 246, 0.08), transparent 60%); }
+    .tile h3 { margin: 0; font-size: 19px; font-weight: 600; letter-spacing: -0.015em; }
+    .tile p { margin: 8px 0 0; font-size: 15px; color: var(--muted); max-width: 46ch; }
+    .tile .label { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent-2); margin-bottom: 14px; }
+    .tile .label svg { width: 15px; height: 15px; }
+    .t-queue { grid-column: span 4; }
+    .t-sync { grid-column: span 2; grid-row: span 2; }
+    .t-dj { grid-column: span 2; }
+    .t-link { grid-column: span 2; }
+    .t-room { grid-column: span 3; }
+    .t-sound { grid-column: span 3; }
+    .shot-in { margin: 24px -28px -28px 28px; border-top-left-radius: 14px; overflow: hidden; border-top: 1px solid var(--surface-border); border-left: 1px solid var(--surface-border); }
+    .t-sync .shot-in { margin: 24px 0 -28px; border-radius: 16px 16px 0 0; border-right: 1px solid var(--surface-border); }
+    .t-sync .shot-in img { width: 100%; }
+    @media (max-width: 960px) {
+      .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .t-queue { grid-column: span 2; }
+      .t-sync { grid-column: span 1; grid-row: span 2; }
+      .t-dj, .t-link { grid-column: span 1; }
+      .t-room, .t-sound { grid-column: span 2; }
+    }
+    @media (max-width: 640px) {
+      .bento { grid-template-columns: minmax(0, 1fr); }
+      .t-queue, .t-sync, .t-dj, .t-link, .t-room, .t-sound { grid-column: auto; grid-row: auto; }
+      .t-sync .shot-in { width: 100%; max-width: 320px; align-self: center; }
+    }
+
+    /* Small in-tile UI pieces, drawn in HTML so they stay crisp. */
+    .bubble { margin-top: 22px; align-self: flex-start; max-width: 100%; padding: 12px 16px; border-radius: 16px 16px 16px 4px; font-size: 14px; line-height: 1.5; background: rgba(139, 92, 246, 0.16); border: 1px solid rgba(192, 132, 252, 0.28); color: var(--ink-soft); }
+    .bubble.me { align-self: flex-end; border-radius: 16px 16px 4px 16px; background: rgba(255, 255, 255, 0.05); border-color: var(--surface-border); font-family: var(--mono); font-size: 13px; }
+    .bubble + .bubble { margin-top: 10px; }
+    .who { display: block; font-size: 12px; font-weight: 600; color: var(--accent-2); margin-bottom: 3px; }
+    .linkbar { margin-top: auto; padding-top: 22px; }
+    .linkbar div { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 14px; border-radius: 14px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--surface-border); font: 13px var(--mono); color: var(--ink-soft); overflow: hidden; }
+    .linkbar span { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .linkbar b { font: 600 12px var(--font); padding: 6px 12px; border-radius: 999px; background: var(--gradient); color: #fff; flex: none; }
+    .avatars { display: flex; margin-top: auto; padding-top: 22px; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .avatars .stack { display: flex; }
+    .avatars .stack i { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 600 12px var(--font); font-style: normal; color: #fff; border: 2px solid #12131e; margin-left: -8px; position: relative; }
+    .avatars .stack i:first-child { margin-left: 0; }
+    .avatars .stack i::after { content: ""; position: absolute; right: -2px; bottom: -2px; width: 11px; height: 11px; border-radius: 50%; background: var(--success); border: 2px solid #12131e; }
+    .emoji { display: flex; gap: 6px; font-size: 20px; padding: 6px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.3); border: 1px solid var(--surface-border); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: auto; padding-top: 22px; }
+    .chip { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; font-size: 13.5px; color: var(--ink-soft); background: rgba(255, 255, 255, 0.04); border: 1px solid var(--surface-border); }
+    .chip svg { width: 15px; height: 15px; color: var(--accent-2); }
+
+    /* --------------------------------------------------------------- phones */
+    .mobile { display: grid; grid-template-columns: 1fr 1.1fr; gap: 64px; align-items: center; }
+    @media (max-width: 900px) { .mobile { grid-template-columns: minmax(0, 1fr); gap: 48px; } }
+    .ticks { margin: 28px 0 0; padding: 0; list-style: none; display: grid; gap: 14px; }
+    .ticks li { display: flex; gap: 12px; color: var(--ink-soft); font-size: 15.5px; }
+    .ticks svg { flex: none; width: 20px; height: 20px; margin-top: 2px; color: var(--accent-2); }
+    .phones { display: flex; justify-content: center; gap: 20px; position: relative; padding-bottom: 40px; }
+    .phones::before { content: ""; position: absolute; inset: 10% 5%; z-index: -1; filter: blur(60px); background: radial-gradient(50% 50% at 50% 50%, rgba(139, 92, 246, 0.35), transparent 70%); }
+    .phone { width: min(46%, 270px); border-radius: 38px; padding: 8px; background: linear-gradient(160deg, #2a2b3a, #12131c 40%, #1b1c28); box-shadow: 0 40px 80px -30px rgba(0, 0, 0, 0.9), inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+    .phone img { border-radius: 30px; width: 100%; }
+    .phone:nth-child(2) { transform: translateY(40px); }
+
+    /* ----------------------------------------------------------------- demo */
+    .demo { position: relative; max-width: 960px; margin: 0 auto; border-radius: var(--radius-lg); overflow: hidden; border: 1px solid var(--surface-border); background: var(--bg-2); }
+    .demo video { width: 100%; aspect-ratio: 1706 / 926; object-fit: cover; }
+    .play { position: absolute; inset: 0; display: grid; place-items: center; cursor: pointer; border: 0; padding: 0; background: linear-gradient(180deg, rgba(8, 9, 15, 0.1), rgba(8, 9, 15, 0.55)); color: #fff; font: inherit; transition: background 0.3s var(--ease); }
+    .play:hover { background: linear-gradient(180deg, rgba(8, 9, 15, 0.05), rgba(8, 9, 15, 0.45)); }
+    .play > span { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+    .play i { width: 76px; height: 76px; border-radius: 50%; display: grid; place-items: center; background: var(--gradient); box-shadow: 0 16px 48px -10px rgba(192, 132, 252, 0.8); transition: transform 0.25s var(--ease); }
+    .play:hover i { transform: scale(1.06); }
+    .play svg { width: 28px; height: 28px; margin-left: 4px; }
+    .play small { font-size: 14px; font-weight: 600; letter-spacing: 0.02em; text-shadow: 0 2px 12px rgba(0, 0, 0, 0.6); }
+
+    /* -------------------------------------------------------------- install */
     .install { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
     @media (max-width: 900px) { .install { grid-template-columns: minmax(0, 1fr); } }
-    .install .card { display: flex; flex-direction: column; min-width: 0; }
-    .install .card:hover { transform: none; }
-    .tag { font-size: 11px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); }
-    .install h3 { margin-top: 8px; }
-    .install p { flex: 1; }
-    .code {
-      position: relative; margin-top: 16px;
-      border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.35); border: 1px solid var(--surface-border);
-    }
-    .code pre {
-      margin: 0; padding: 14px 48px 14px 14px; overflow-x: auto;
-      font: 12.5px/1.7 var(--mono); color: var(--ink-soft); white-space: pre;
-    }
-    .copy {
-      position: absolute; top: 8px; right: 8px; width: 30px; height: 30px;
-      display: grid; place-items: center; border-radius: 8px; cursor: pointer;
-      background: rgba(255, 255, 255, 0.05); border: 1px solid var(--surface-border); color: var(--muted);
-      transition: color 0.2s var(--ease), background 0.2s var(--ease);
-    }
+    .card { display: flex; flex-direction: column; min-width: 0; padding: 26px; border-radius: var(--radius-md); background: var(--surface); border: 1px solid var(--surface-border); }
+    .card.pick { border-color: rgba(192, 132, 252, 0.4); box-shadow: 0 20px 60px -30px rgba(139, 92, 246, 0.6); }
+    .tag { display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); }
+    .card.pick .tag { color: var(--accent-2); }
+    .card h3 { margin: 10px 0 0; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+    .card p { margin: 8px 0 0; font-size: 14.5px; color: var(--muted); flex: 1; }
+    .card .btn { margin-top: 20px; align-self: flex-start; }
+    p code { font: 0.9em var(--mono); color: var(--ink-soft); background: rgba(255, 255, 255, 0.06); padding: 1px 6px; border-radius: 6px; }
+    .code { position: relative; margin-top: 18px; border-radius: var(--radius-sm); background: rgba(0, 0, 0, 0.4); border: 1px solid var(--surface-border); }
+    .code pre { margin: 0; padding: 14px 50px 14px 14px; overflow-x: auto; font: 12.5px/1.75 var(--mono); color: var(--ink-soft); white-space: pre; }
+    .copy { position: absolute; top: 8px; right: 8px; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 9px; cursor: pointer; background: rgba(255, 255, 255, 0.05); border: 1px solid var(--surface-border); color: var(--muted); transition: color 0.2s var(--ease), background 0.2s var(--ease); }
     .copy:hover { color: var(--ink); background: rgba(255, 255, 255, 0.1); }
-    .copy svg { width: 14px; height: 14px; }
-    .copy.done { color: #4ade80; }
-    .install .btn { margin-top: 16px; align-self: flex-start; }
-    .note {
-      margin-top: 24px; padding: 16px 20px; border-radius: var(--radius-md);
-      background: rgba(139, 92, 246, 0.06); border: 1px solid rgba(192, 132, 252, 0.15);
-      font-size: 14px; color: var(--ink-soft);
-    }
-    .note strong { color: var(--ink); }
+    .copy svg { width: 15px; height: 15px; }
+    .copy.done { color: var(--success); }
+    .note { margin-top: 20px; padding: 16px 20px; border-radius: var(--radius-md); display: flex; gap: 12px; align-items: flex-start; background: rgba(139, 92, 246, 0.06); border: 1px solid rgba(192, 132, 252, 0.15); font-size: 14.5px; color: var(--ink-soft); }
+    .note svg { flex: none; width: 18px; height: 18px; margin-top: 2px; color: var(--accent-2); }
+    .note strong { color: var(--ink); font-weight: 600; }
     .note a { color: var(--accent-2); }
 
-    /* ---------------------------------------------------------------- faq */
-    .faq { max-width: 760px; margin: 0 auto; }
+    /* ------------------------------------------------------------------ faq */
+    .faq { max-width: 760px; margin: 0 auto; border-top: 1px solid var(--line); }
     details { border-bottom: 1px solid var(--line); }
-    summary {
-      list-style: none; cursor: pointer; padding: 20px 0;
-      display: flex; justify-content: space-between; align-items: center; gap: 16px;
-      font-weight: 600; font-size: 16px;
-    }
+    summary { list-style: none; cursor: pointer; padding: 22px 4px; display: flex; justify-content: space-between; align-items: center; gap: 16px; font-weight: 600; font-size: 16.5px; letter-spacing: -0.005em; }
     summary::-webkit-details-marker { display: none; }
-    summary::after { content: "+"; font-size: 22px; font-weight: 400; color: var(--muted); transition: transform 0.2s var(--ease); }
-    details[open] summary::after { transform: rotate(45deg); }
-    details p { margin: 0 0 20px; color: var(--muted); font-size: 15px; }
+    summary svg { flex: none; width: 18px; height: 18px; color: var(--muted); transition: transform 0.25s var(--ease); }
+    details[open] summary svg { transform: rotate(45deg); }
+    details p { margin: 0 4px 22px; color: var(--muted); font-size: 15.5px; max-width: 64ch; }
     details a { color: var(--accent-2); }
 
-    /* -------------------------------------------------------------- final */
-    .final {
-      text-align: center; padding: 72px 24px; border-radius: var(--radius-lg);
-      background:
-        radial-gradient(60% 80% at 50% 0%, rgba(139, 92, 246, 0.25), transparent 70%),
-        var(--surface);
-      border: 1px solid var(--surface-border);
-    }
-    .final p { margin: 16px auto 0; max-width: 520px; color: var(--ink-soft); }
+    /* ---------------------------------------------------------------- final */
+    .final { position: relative; overflow: hidden; text-align: center; padding: 88px 24px; border-radius: 28px; background: radial-gradient(70% 90% at 50% 0%, rgba(139, 92, 246, 0.3), transparent 70%), var(--surface); border: 1px solid var(--surface-border); }
+    .final img { width: 56px; height: 56px; margin: 0 auto 24px; }
+    .final p { margin: 18px auto 0; max-width: 520px; color: var(--ink-soft); font-size: 17px; }
 
-    /* ------------------------------------------------------------- footer */
-    footer { border-top: 1px solid var(--line); padding: 40px 0 calc(40px + env(safe-area-inset-bottom)); }
-    .foot { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 24px; }
-    .foot nav { display: flex; flex-wrap: wrap; gap: 8px 24px; font-size: 13px; }
-    .foot nav a { color: var(--muted); text-decoration: none; transition: color 0.2s var(--ease); }
-    .foot nav a:hover { color: var(--ink); }
-    .small { margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255, 255, 255, 0.06); font-size: 12px; color: rgba(138, 140, 164, 0.75); }
-    .small a { color: var(--muted); text-decoration: none; }
-    .small a:hover { color: var(--ink); }
-    .studio { font-weight: 600; letter-spacing: 0.14em; }
+    /* --------------------------------------------------------------- footer */
+    footer { border-top: 1px solid var(--line); margin-top: 120px; padding: 56px 0 calc(40px + env(safe-area-inset-bottom)); }
+    .foot { display: grid; grid-template-columns: 1.4fr repeat(3, minmax(0, 1fr)); gap: 40px; }
+    @media (max-width: 800px) { .foot { grid-template-columns: repeat(2, minmax(0, 1fr)); } .foot > :first-child { grid-column: 1 / -1; } }
+    .foot p { margin: 14px 0 0; font-size: 14px; color: var(--muted); max-width: 34ch; }
+    .foot h4 { margin: 0 0 14px; font-size: 12px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: var(--faint); }
+    .foot ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 14px; }
+    .foot ul a { color: var(--ink-soft); text-decoration: none; transition: color 0.2s var(--ease); }
+    .foot ul a:hover { color: #fff; }
+    .studio { margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 16px; font-size: 13px; color: var(--faint); }
+    .by { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; color: var(--muted); }
+    .by strong { font-weight: 700; letter-spacing: 0.2em; color: var(--ink); font-size: 13px; }
+    .by:hover strong { color: #fff; }
+    .mark { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: #fff; color: #08090f; font: 800 14px var(--font); }
 
-    @media (max-width: 600px) {
-      .hero { padding: 56px 0 40px; }
-      section { padding: 72px 0; }
-      .shot { margin-top: 40px; border-radius: var(--radius-md); }
+    /* --------------------------------------------------------------- motion */
+    .js .reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.7s var(--ease), transform 0.7s var(--ease); }
+    .js .reveal.in { opacity: 1; transform: none; }
+
+    @media (max-width: 640px) {
+      .hero { padding-top: 48px; }
+      section { padding: 88px 0; }
+      .frame { margin-top: 44px; border-radius: 12px; }
+      .frame-inner { border-radius: 11px; }
       .cta .btn { flex: 1 1 100%; }
+      .tile { padding: 24px; }
+      .shot-in { margin: 20px -24px -24px 24px; }
+      .t-sync .shot-in { margin: 20px auto -24px; }
+      .phone { border-radius: 30px; padding: 6px; }
+      .phone img { border-radius: 24px; }
+      .phone:nth-child(2) { transform: translateY(28px); }
+      footer { margin-top: 88px; }
     }
-
     @media (prefers-reduced-motion: reduce) {
       html { scroll-behavior: auto; }
       *, *::before, *::after { transition: none !important; animation: none !important; }
+      .js .reveal { opacity: 1; transform: none; }
     }
   </style>
 </head>
 <body>
-  <div class="aurora" aria-hidden="true"></div>
+  <!-- Icons from Lucide (ISC), inlined once and referenced by id. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <defs>
+      <symbol id="i-github" viewBox="0 0 16 16"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+      <symbol id="i-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+      <symbol id="i-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></symbol>
+      <symbol id="i-list-music" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15V6"/><path d="M18.5 18a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M12 12H3"/><path d="M16 6H3"/><path d="M12 18H3"/></symbol>
+      <symbol id="i-radio" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></symbol>
+      <symbol id="i-sparkles" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.94 14.06 8.5 19l-1.44-4.94L2 12.5l5.06-1.44L8.5 6l1.44 5.06L15 12.5z"/><path d="M20 3v4"/><path d="M22 5h-4"/><path d="M18 17v4"/><path d="M20 19h-4"/></symbol>
+      <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></symbol>
+      <symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+      <symbol id="i-waves" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 10v3"/><path d="M6 6v11"/><path d="M10 3v18"/><path d="M14 8v7"/><path d="M18 5v13"/><path d="M22 10v3"/></symbol>
+      <symbol id="i-shuffle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m18 14 4 4-4 4"/><path d="m18 2 4 4-4 4"/><path d="M2 18h1.97a4 4 0 0 0 3.3-1.7l5.46-7.6a4 4 0 0 1 3.3-1.7H22"/><path d="M2 6h1.97a4 4 0 0 1 3.3 1.7l.63.9"/><path d="M22 18h-6.04a4 4 0 0 1-3.3-1.8l-.63-.9"/></symbol>
+      <symbol id="i-gauge" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
+      <symbol id="i-cast" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 8V6a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/><path d="M2 12a9 9 0 0 1 8 8"/><path d="M2 16a5 5 0 0 1 4 4"/><line x1="2" x2="2.01" y1="20" y2="20"/></symbol>
+      <symbol id="i-phone" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></symbol>
+      <symbol id="i-done" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+      <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+      <symbol id="i-play" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4.8v14.4a1 1 0 0 0 1.5.86l12-7.2a1 1 0 0 0 0-1.72l-12-7.2A1 1 0 0 0 6 4.8z"/></symbol>
+      <symbol id="i-server" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="2" rx="2" ry="2"/><rect width="20" height="8" x="2" y="14" rx="2" ry="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></symbol>
+    </defs>
+  </svg>
 
-  <header class="nav">
+  <div class="aurora" aria-hidden="true"></div>
+  <div class="grid-bg" aria-hidden="true"></div>
+
+  <header class="nav" id="nav">
     <div class="wrap">
       <a class="brand" href="#top" aria-label="Syncwave home">
-        <img src="/assets/logo.svg" alt="" width="28" height="28" />
+        <img src="/assets/logo.svg" alt="" width="30" height="30" />
         Syncwave
       </a>
       <nav class="nav-links" aria-label="Primary">
         <a class="hide-sm" href="#features">Features</a>
+        <a class="hide-sm" href="#mobile">Mobile</a>
         <a class="hide-sm" href="#install">Self-host</a>
         <a class="hide-sm" href="#faq">FAQ</a>
         <a class="btn btn-ghost btn-sm" href="https://github.com/SAKMZ/syncwave" rel="noopener">
-          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          <svg aria-hidden="true"><use href="#i-github" /></svg>
           GitHub
         </a>
       </nav>
@@ -273,192 +395,258 @@
   </header>
 
   <main id="top">
-    <!-- ================================================================ hero -->
+    <!-- ================================================================= hero -->
     <div class="wrap hero">
-      <span class="eyebrow">Self-hosted · Free for personal use</span>
+      <a class="pill" href="https://github.com/SAKMZ/syncwave/releases/latest" rel="noopener">
+        <b data-version>v1.1.1</b>
+        <span>Crossfade, casting and host controls</span>
+        <svg aria-hidden="true"><use href="#i-arrow" /></svg>
+      </a>
       <h1>Listen together, <span class="grad">in perfect sync.</span></h1>
       <p class="lede">
         Start a room, send one link, and everyone hears the same second of the same song.
-        A shared queue, live chat and reactions, with no accounts and no Premium.
-        It runs on a computer you already own.
+        Shared queue, live chat and reactions. No accounts, no Premium, and it runs on a computer you already own.
       </p>
       <div class="cta">
-        <a class="btn btn-primary" href="#install">Run your own</a>
-        <a class="btn btn-ghost" href="https://github.com/SAKMZ/syncwave" rel="noopener">View the source</a>
+        <a class="btn btn-primary" id="dl" href="https://github.com/SAKMZ/syncwave/releases/latest" rel="noopener">
+          <svg aria-hidden="true"><use href="#i-download" /></svg>
+          <span id="dl-label">Download Syncwave</span>
+        </a>
+        <a class="btn btn-ghost" href="#install">Other ways to install</a>
       </div>
-      <p class="fine">Windows, macOS, Linux or Docker. Takes about five minutes.</p>
+      <ul class="trust" aria-label="At a glance">
+        <li><svg aria-hidden="true"><use href="#i-check" /></svg>Source available</li>
+        <li><svg aria-hidden="true"><use href="#i-check" /></svg>Free for personal use</li>
+        <li><svg aria-hidden="true"><use href="#i-check" /></svg>Windows, macOS, Linux, Docker</li>
+      </ul>
 
-      <div class="shot">
-        <img
-          src="/assets/room-live.png"
-          width="1800" height="913"
-          fetchpriority="high"
-          alt="A Syncwave listening room tinted by the album art: the shared queue shows who added each track, with DJ recommendations, a live activity feed and the player with reactions."
-        />
+      <div class="frame reveal">
+        <div class="frame-inner">
+          <div class="chrome" aria-hidden="true">
+            <div class="dots"><i></i><i></i><i></i></div>
+            <div class="url"><svg><use href="#i-lock" /></svg>your-server/r/5BVZ3C</div>
+            <div class="spacer"></div>
+          </div>
+          <img
+            src="/assets/room-1600.webp"
+            srcset="/assets/room-960.webp 960w, /assets/room-1600.webp 1600w, /assets/room-2400.webp 2400w"
+            sizes="(max-width: 1120px) 100vw, 1080px"
+            width="2880" height="1800"
+            fetchpriority="high"
+            alt="A Syncwave room: Daft Punk's Instant Crush playing, a queue showing who added each song, DJ suggestions, and a chat where the AI DJ has just queued three jazz tracks for a listener."
+          />
+        </div>
       </div>
     </div>
 
-    <!-- ============================================================ features -->
+    <!-- ============================================================= features -->
     <section id="features">
       <div class="wrap">
-        <div class="section-head">
-          <div class="kicker">What's in a room</div>
-          <h2>Everything a listening party needs, nothing it doesn't.</h2>
-          <p>Think house party, long-distance date night, study room, or the music channel of your Discord, except everyone hears it at full quality and can actually run the queue.</p>
+        <div class="head reveal">
+          <span class="kicker">Inside a room</span>
+          <h2>Everything a listening party needs. Nothing it doesn't.</h2>
+          <p>A house party, a long-distance date night, a study session or your Discord's music channel, with everyone hearing it at full quality and able to run the queue.</p>
         </div>
 
-        <div class="grid">
-          <article class="card">
-            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-            <h3>Playback that stays locked</h3>
-            <p>The server keeps the clock and every listener follows it. Nobody drifts, and a laptop waking from sleep catches up instead of dragging the room back.</p>
-          </article>
-          <article class="card">
-            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7"/></svg></div>
-            <h3>One link, no sign-ups</h3>
-            <p>Share a code or a URL. Friends pick a name and they're in. Rooms survive restarts, so a link can stay your group's spot for good.</p>
-          </article>
-          <article class="card">
-            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h13M3 12h13M3 18h9"/><path d="M19 15v6M16 18h6"/></svg></div>
-            <h3>A queue people can share</h3>
+        <div class="bento">
+          <article class="tile t-queue reveal">
+            <span class="label"><svg aria-hidden="true"><use href="#i-list-music" /></svg>Shared queue</span>
+            <h3>A queue the whole room runs.</h3>
             <p>Anyone can add. Upvotes move a track one place per person, so one enthusiast can't take over. Drag to reorder, vote to skip, and see who added what.</p>
+            <div class="shot-in">
+              <img src="/assets/queue.webp" width="1312" height="779" loading="lazy" alt="The Up Next queue with tracks by Kali Uchis, Khruangbin, Frank Ocean and Arctic Monkeys, each marked with who added it, plus upvote and like buttons." />
+            </div>
           </article>
-          <article class="card">
-            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></div>
-            <h3>Chat, reactions, presence</h3>
-            <p>See who's typing, queueing or away. Emoji reactions burst identically on every screen, and joins and skips go to their own feed so they don't bury the chat.</p>
+
+          <article class="tile t-sync reveal">
+            <span class="label"><svg aria-hidden="true"><use href="#i-radio" /></svg>Synced playback</span>
+            <h3>Everyone on the same second.</h3>
+            <p>The server keeps the clock and every listener follows it. A laptop waking from sleep catches up instead of pulling the room back.</p>
+            <div class="shot-in">
+              <img src="/assets/now-playing.webp" width="680" height="1399" loading="lazy" alt="The Now Playing card: Daft Punk's Random Access Memories cover, the track title, who added it, and a waveform progress bar." />
+            </div>
           </article>
-          <article class="card">
-            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/></svg></div>
-            <h3>An optional AI DJ</h3>
-            <p>Type <code>/dj ten rainy-day songs</code> in chat and it fills the queue, then introduces tracks in character. Works with a free Gemini key or a local Ollama. Off by default.</p>
+
+          <article class="tile t-dj reveal">
+            <span class="label"><svg aria-hidden="true"><use href="#i-sparkles" /></svg>AI DJ · optional</span>
+            <h3>Ask for a vibe.</h3>
+            <div class="bubble me">/dj add 3 late night jazz songs</div>
+            <div class="bubble"><span class="who">Vinyl Collector</span>On it. Queued 3 tracks, starting with "Blue in Green" by Miles Davis.</div>
+            <p style="margin-top: 16px">Six personas. Free with a Gemini key or a local Ollama. Off until you turn it on.</p>
           </article>
-          <article class="card">
-            <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="7" y="2" width="10" height="20" rx="2.5"/><path d="M11 18h2"/></svg></div>
-            <h3>Made for phones</h3>
-            <p>Swipeable panes, lock-screen controls, and installable to the home screen. Crossfade, volume levelling and casting to your speakers are built in.</p>
+
+          <article class="tile t-link reveal">
+            <span class="label"><svg aria-hidden="true"><use href="#i-link" /></svg>No sign-ups</span>
+            <h3>One link. That's the invite.</h3>
+            <p>Friends pick a name and they're in. Rooms survive restarts, so a link can be your group's spot for good.</p>
+            <div class="linkbar"><div><span>your-server/r/5BVZ3C</span><b>Share</b></div></div>
+          </article>
+
+          <article class="tile t-room reveal">
+            <span class="label"><svg aria-hidden="true"><use href="#i-users" /></svg>Presence</span>
+            <h3>A room that feels occupied.</h3>
+            <p>See who's listening, typing or away. Reactions burst the same way on every screen, and the whole room takes its colour from the album art.</p>
+            <div class="avatars">
+              <div class="stack">
+                <i style="background:#e0457b">MA</i><i style="background:#22a06b">JO</i><i style="background:#8b5cf6">PR</i>
+              </div>
+              <div class="emoji" aria-hidden="true">❤️ 🔥 👏 😂 ✨ 🎉</div>
+            </div>
+          </article>
+
+          <article class="tile t-sound reveal">
+            <span class="label"><svg aria-hidden="true"><use href="#i-waves" /></svg>Sound</span>
+            <h3>Plays like a real music app.</h3>
+            <p>The details you'd expect from the paid ones, built in and on by default.</p>
+            <div class="chips">
+              <span class="chip"><svg aria-hidden="true"><use href="#i-shuffle" /></svg>Crossfade</span>
+              <span class="chip"><svg aria-hidden="true"><use href="#i-gauge" /></svg>Volume levelling</span>
+              <span class="chip"><svg aria-hidden="true"><use href="#i-cast" /></svg>Cast to speakers</span>
+              <span class="chip"><svg aria-hidden="true"><use href="#i-phone" /></svg>Lock-screen controls</span>
+              <span class="chip"><svg aria-hidden="true"><use href="#i-shield" /></svg>Host moderation</span>
+            </div>
           </article>
         </div>
       </div>
     </section>
 
-    <!-- ================================================================ demo -->
-    <section style="padding-top: 0">
-      <div class="wrap demo">
-        <video
-          controls
-          preload="none"
-          playsinline
-          poster="/assets/demo-poster.jpg"
-          width="1706" height="926"
-          aria-label="Two minutes of a Syncwave room, unedited"
-        >
-          <source src="/assets/demo.mp4" type="video/mp4" />
-        </video>
-        <div>
-          <div class="kicker">See it running</div>
-          <h2>Two minutes, unedited.</h2>
-          <ul>
-            <li>A line in chat becomes ten queued tracks and a spoken intro.</li>
-            <li>A second listener joins, talks, and hears exactly what you hear.</li>
-            <li>The whole room takes its colour from the album art and changes with the music.</li>
+    <!-- =============================================================== mobile -->
+    <section id="mobile" style="padding-top: 40px">
+      <div class="wrap mobile">
+        <div class="reveal">
+          <span class="kicker">On your phone</span>
+          <h2>Built for the phone, not squeezed onto it.</h2>
+          <p class="lede" style="margin-left: 0; text-align: left">Most people join from a phone, so that's where the room was designed first.</p>
+          <ul class="ticks">
+            <li><svg aria-hidden="true"><use href="#i-check" /></svg><span>Swipe between now playing, the queue and chat.</span></li>
+            <li><svg aria-hidden="true"><use href="#i-check" /></svg><span>Controls on the lock screen and your headphones.</span></li>
+            <li><svg aria-hidden="true"><use href="#i-check" /></svg><span>Add a room to your home screen and it opens straight back into it.</span></li>
+            <li><svg aria-hidden="true"><use href="#i-check" /></svg><span>Lock your phone mid-song and you keep your seat.</span></li>
           </ul>
         </div>
+        <div class="phones reveal">
+          <div class="phone"><img src="/assets/phone-queue.webp" width="780" height="1688" loading="lazy" alt="Syncwave on a phone, showing the queue tab." /></div>
+          <div class="phone"><img src="/assets/phone-chat.webp" width="780" height="1688" loading="lazy" alt="Syncwave on a phone, showing the chat with the AI DJ introducing a Tame Impala track." /></div>
+        </div>
       </div>
     </section>
 
-    <!-- ============================================================= install -->
+    <!-- ================================================================= demo -->
+    <section>
+      <div class="wrap">
+        <div class="head center reveal">
+          <span class="kicker">See it running</span>
+          <h2>Two minutes, unedited.</h2>
+          <p>A line in chat becomes ten queued tracks and a spoken intro. A second listener joins and hears exactly what you hear.</p>
+        </div>
+        <div class="demo reveal">
+          <video id="demo" preload="none" playsinline poster="/assets/demo-poster.jpg" width="1706" height="926">
+            <source src="/assets/demo.mp4" type="video/mp4" />
+          </video>
+          <button class="play" id="play" type="button" aria-label="Play the two-minute demo">
+            <span><i><svg aria-hidden="true"><use href="#i-play" /></svg></i><small>Watch the demo · 2:00</small></span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== install -->
     <section id="install">
       <div class="wrap">
-        <div class="section-head center">
-          <div class="kicker">Run your own</div>
-          <h2>Your server, your music, your rules.</h2>
-          <p>There's no hosted service to sign up for. Syncwave runs on your machine, and your friends connect to it.</p>
+        <div class="head center reveal">
+          <span class="kicker">Run your own</span>
+          <h2>Your server. Your music. Your rules.</h2>
+          <p>There's no hosted service to sign up for. Syncwave runs on your machine and your friends connect to it. Setup takes about five minutes.</p>
         </div>
 
-        <div class="install">
-          <article class="card">
-            <span class="tag">Easiest</span>
-            <h3>Double-click it</h3>
-            <p>Download, unzip, and run <code>start.bat</code> on Windows or <code>start.sh</code> on macOS and Linux. It fetches what it needs, opens your browser, and prints a public link you can send to anyone.</p>
-            <a class="btn btn-primary btn-sm" href="https://github.com/SAKMZ/syncwave/releases/latest" rel="noopener">Download the latest release</a>
+        <div class="install reveal">
+          <article class="card pick">
+            <span class="tag"><svg width="14" height="14" aria-hidden="true"><use href="#i-download" /></svg><span id="desk-tag">Desktop</span></span>
+            <h3>Download and double-click</h3>
+            <p>Unzip and run <code>start.bat</code> on Windows or <code>start.sh</code> on macOS and Linux. It fetches what it needs, opens your browser, and prints a public link you can send to anyone.</p>
+            <a class="btn btn-primary btn-sm" href="https://github.com/SAKMZ/syncwave/releases/latest" rel="noopener">
+              <svg aria-hidden="true"><use href="#i-download" /></svg>Latest release
+            </a>
           </article>
 
           <article class="card">
-            <span class="tag">Always-on box</span>
+            <span class="tag"><svg width="14" height="14" aria-hidden="true"><use href="#i-server" /></svg>Home server or NAS</span>
             <h3>Docker</h3>
-            <p>For a home server or a NAS that stays on.</p>
+            <p>For a box that stays on.</p>
             <div class="code">
               <pre><code>git clone https://github.com/SAKMZ/syncwave.git
 cd syncwave && cp .env.example .env
 docker compose up -d --build</code></pre>
-              <button class="copy" type="button" aria-label="Copy Docker commands"></button>
+              <button class="copy" type="button" aria-label="Copy Docker commands"><svg aria-hidden="true"><use href="#i-copy" /></svg></button>
             </div>
           </article>
 
           <article class="card">
-            <span class="tag">Linux server</span>
+            <span class="tag"><svg width="14" height="14" aria-hidden="true"><use href="#i-server" /></svg>Linux server</span>
             <h3>One command</h3>
-            <p>Installs everything on Ubuntu or Debian. Add a domain and it sets up HTTPS for you.</p>
+            <p>Installs everything on Ubuntu or Debian. Give it a domain and it sets up HTTPS too.</p>
             <div class="code">
               <pre><code>curl -fsSL https://raw.githubusercontent.com/SAKMZ/syncwave/main/scripts/install.sh | sudo bash</code></pre>
-              <button class="copy" type="button" aria-label="Copy install command"></button>
+              <button class="copy" type="button" aria-label="Copy install command"><svg aria-hidden="true"><use href="#i-copy" /></svg></button>
             </div>
           </article>
         </div>
 
-        <p class="note">
-          <strong>Hosting on a cloud VPS?</strong> YouTube refuses most datacenter IPs, so you'll need a proxy pool or a cookies file.
-          It's one setting in the admin console, and the <a href="https://github.com/SAKMZ/syncwave/blob/main/DEPLOY.md" rel="noopener">self-host guide</a> walks through it.
+        <p class="note reveal">
+          <svg aria-hidden="true"><use href="#i-server" /></svg>
+          <span><strong>Hosting on a cloud VPS?</strong> YouTube refuses most datacenter IPs, so you'll need a proxy pool or a cookies file. It's one setting in the admin console, and the <a href="https://github.com/SAKMZ/syncwave/blob/main/DEPLOY.md" rel="noopener">self-host guide</a> walks through it.</span>
         </p>
       </div>
     </section>
 
-    <!-- ================================================================= faq -->
-    <section id="faq" style="padding-top: 0">
+    <!-- ================================================================== faq -->
+    <section id="faq" style="padding-top: 40px">
       <div class="wrap">
-        <div class="section-head center">
-          <div class="kicker">Questions</div>
-          <h2>The ones people actually ask.</h2>
+        <div class="head center reveal">
+          <span class="kicker">FAQ</span>
+          <h2>Questions, answered.</h2>
         </div>
-        <div class="faq">
+        <div class="faq reveal">
           <details>
-            <summary>Does everyone need Spotify, or Premium?</summary>
-            <p>No. Nobody needs an account with anything. Audio is fetched by your server and streamed from it, so listeners just open a link.</p>
+            <summary>Does everyone need Spotify, or Premium?<svg aria-hidden="true"><use href="#i-plus" /></svg></summary>
+            <p>No. Nobody needs an account with anything. Your server fetches the audio and streams it, so listeners just open a link.</p>
           </details>
           <details>
-            <summary>How many people can join a room?</summary>
+            <summary>How many people can join a room?<svg aria-hidden="true"><use href="#i-plus" /></svg></summary>
             <p>There's no built-in cap. The real limit is your upload speed, since each listener streams from your machine. A group of friends on a home connection is comfortable.</p>
           </details>
           <details>
-            <summary>Can I use it alongside Discord?</summary>
+            <summary>Can I use it alongside Discord?<svg aria-hidden="true"><use href="#i-plus" /></svg></summary>
             <p>That's the most common setup: voice in Discord, music in a Syncwave room. Unlike a music bot, everyone hears full quality and can queue, vote and see what's playing.</p>
           </details>
           <details>
-            <summary>Do I have to pay for the AI DJ?</summary>
-            <p>No. Run it on your own machine with Ollama and no key at all, or use a free Gemini key from Google. It's off until you turn it on, and your key never leaves your server.</p>
+            <summary>Do I have to pay for the AI DJ?<svg aria-hidden="true"><use href="#i-plus" /></svg></summary>
+            <p>No. Run it locally with Ollama and no key at all, or use a free Gemini key from Google. It stays off until you turn it on, and your key never leaves your server.</p>
           </details>
           <details>
-            <summary>Where does the music come from?</summary>
-            <p>YouTube Music, fetched with yt-dlp and cached on your disk. Syncwave is a self-host tool for you and your friends; please don't run it as a public or paid service.</p>
+            <summary>Where does the music come from?<svg aria-hidden="true"><use href="#i-plus" /></svg></summary>
+            <p>YouTube Music, fetched with yt-dlp and cached on your disk. Syncwave is a self-host tool for you and your friends. Please don't run it as a public or paid service.</p>
           </details>
           <details>
-            <summary>Is it free?</summary>
-            <p>Free to run, fork and change for personal, hobby and nonprofit use, under the <a href="https://github.com/SAKMZ/syncwave/blob/main/LICENSE" rel="noopener">PolyForm Noncommercial license</a>. Selling access or bundling it into a paid product needs a separate agreement. <a href="mailto:hello@awetomiq.com">Get in touch</a> if that's you.</p>
+            <summary>Is it free?<svg aria-hidden="true"><use href="#i-plus" /></svg></summary>
+            <p>Free to run, fork and change for personal, hobby and nonprofit use under the <a href="https://github.com/SAKMZ/syncwave/blob/main/LICENSE" rel="noopener">PolyForm Noncommercial license</a>. Selling access or bundling it into a paid product needs a separate agreement, so <a href="mailto:hello@awetomiq.com">get in touch</a> if that's you.</p>
           </details>
         </div>
       </div>
     </section>
 
-    <!-- =============================================================== final -->
-    <section style="padding-top: 0">
+    <!-- ================================================================ final -->
+    <section style="padding-top: 0; padding-bottom: 0">
       <div class="wrap">
-        <div class="final">
+        <div class="final reveal">
+          <img src="/assets/logo.svg" alt="" width="56" height="56" />
           <h2>Press play for everyone.</h2>
           <p>Set it up once, share the link, and the room is yours for as long as you want it.</p>
           <div class="cta">
             <a class="btn btn-primary" href="#install">Get started</a>
-            <a class="btn btn-ghost" href="https://github.com/SAKMZ/syncwave" rel="noopener">Star on GitHub</a>
+            <a class="btn btn-ghost" href="https://github.com/SAKMZ/syncwave" rel="noopener">
+              <svg aria-hidden="true"><use href="#i-github" /></svg>Star on GitHub
+            </a>
           </div>
         </div>
       </div>
@@ -468,51 +656,133 @@ docker compose up -d --build</code></pre>
   <footer>
     <div class="wrap">
       <div class="foot">
-        <a class="brand" href="#top">
-          <img src="/assets/logo.svg" alt="" width="24" height="24" />
-          Syncwave
-        </a>
-        <nav aria-label="Footer">
-          <a href="https://github.com/SAKMZ/syncwave" rel="noopener">GitHub</a>
-          <a href="https://github.com/SAKMZ/syncwave/blob/main/DEPLOY.md" rel="noopener">Self-host guide</a>
-          <a href="https://github.com/SAKMZ/syncwave/releases" rel="noopener">Releases</a>
-          <a href="https://github.com/SAKMZ/syncwave/blob/main/LICENSE" rel="noopener">License</a>
-        </nav>
+        <div>
+          <a class="brand" href="#top">
+            <img src="/assets/logo.svg" alt="" width="30" height="30" />
+            Syncwave
+          </a>
+          <p>Self-hosted listening rooms. One link, everyone in sync.</p>
+        </div>
+        <div>
+          <h4>Product</h4>
+          <ul>
+            <li><a href="#features">Features</a></li>
+            <li><a href="#mobile">Mobile</a></li>
+            <li><a href="https://github.com/SAKMZ/syncwave/releases" rel="noopener">Releases</a></li>
+            <li><a href="https://github.com/SAKMZ/syncwave/blob/main/CHANGELOG.md" rel="noopener">Changelog</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Self-host</h4>
+          <ul>
+            <li><a href="#install">Install</a></li>
+            <li><a href="https://github.com/SAKMZ/syncwave/blob/main/DEPLOY.md" rel="noopener">Deployment guide</a></li>
+            <li><a href="https://github.com/SAKMZ/syncwave/blob/main/docs/FAQ.md" rel="noopener">Full FAQ</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Project</h4>
+          <ul>
+            <li><a href="https://github.com/SAKMZ/syncwave" rel="noopener">GitHub</a></li>
+            <li><a href="https://github.com/SAKMZ/syncwave/issues" rel="noopener">Report an issue</a></li>
+            <li><a href="https://github.com/SAKMZ/syncwave/blob/main/LICENSE" rel="noopener">License</a></li>
+            <li><a href="mailto:hello@awetomiq.com">Contact</a></li>
+          </ul>
+        </div>
       </div>
-      <p class="small">
-        © <span id="year">2026</span> Syncwave · Built by
-        <a class="studio" href="https://awetomiq.com" rel="noopener">AWETOMIQ</a> ·
-        <a href="mailto:hello@awetomiq.com">hello@awetomiq.com</a> ·
-        Not affiliated with Spotify or YouTube.
-      </p>
+      <div class="studio">
+        <a class="by" href="https://awetomiq.com" rel="noopener">
+          <span class="mark" aria-hidden="true">A</span>
+          <span>A product by <strong>AWETOMIQ</strong></span>
+        </a>
+        <span>© <span id="year">2026</span> Syncwave · Not affiliated with Spotify or YouTube.</span>
+      </div>
     </div>
   </footer>
 
   <script>
     document.getElementById("year").textContent = new Date().getFullYear();
 
-    const copyIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></svg>';
-    const doneIcon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7"/></svg>';
+    // Solid header once the page scrolls.
+    const nav = document.getElementById("nav");
+    const onScroll = () => nav.classList.toggle("scrolled", scrollY > 8);
+    addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
 
+    // Name the visitor's OS on the download button.
+    const ua = navigator.userAgent;
+    const os = /Windows/.test(ua) ? "Windows"
+      : /Mac OS X|Macintosh/.test(ua) && !/iPhone|iPad/.test(ua) && navigator.maxTouchPoints < 2 ? "macOS"
+      : /Linux/.test(ua) && !/Android/.test(ua) ? "Linux"
+      : null;
+    if (os) {
+      document.getElementById("dl-label").textContent = `Download for ${os}`;
+      document.getElementById("desk-tag").textContent = `Recommended for ${os}`;
+    } else {
+      // A phone can't host it, so send people to the options instead of a zip.
+      const dl = document.getElementById("dl");
+      dl.href = "#install";
+      dl.removeAttribute("rel");
+      document.getElementById("dl-label").textContent = "Get Syncwave";
+    }
+
+    // Show the real latest version, cached for a day to stay under GitHub's rate limit.
+    (async () => {
+      const KEY = "sw-latest";
+      let tag;
+      try {
+        const hit = JSON.parse(localStorage.getItem(KEY) || "null");
+        if (hit && hit.tag && Date.now() - hit.at < 864e5) tag = hit.tag;
+      } catch {}
+      if (!tag) {
+        try {
+          const r = await fetch("https://api.github.com/repos/SAKMZ/syncwave/releases/latest", { headers: { Accept: "application/vnd.github+json" } });
+          if (r.ok) {
+            tag = (await r.json()).tag_name;
+            try { localStorage.setItem(KEY, JSON.stringify({ tag, at: Date.now() })); } catch {}
+          }
+        } catch {}
+      }
+      if (tag) document.querySelectorAll("[data-version]").forEach((el) => (el.textContent = tag));
+    })();
+
+    // Custom play button; native controls take over once it's playing.
+    const video = document.getElementById("demo");
+    document.getElementById("play").addEventListener("click", (e) => {
+      video.controls = true;
+      e.currentTarget.remove();
+      video.play().catch(() => {});
+    });
+
+    // Copy buttons.
     for (const btn of document.querySelectorAll(".copy")) {
-      btn.innerHTML = copyIcon;
       btn.addEventListener("click", async () => {
         const text = btn.parentElement.querySelector("code").textContent;
         try {
           await navigator.clipboard.writeText(text);
-          btn.innerHTML = doneIcon;
+          btn.innerHTML = '<svg aria-hidden="true"><use href="#i-done" /></svg>';
           btn.classList.add("done");
-          setTimeout(() => { btn.innerHTML = copyIcon; btn.classList.remove("done"); }, 1600);
+          setTimeout(() => { btn.innerHTML = '<svg aria-hidden="true"><use href="#i-copy" /></svg>'; btn.classList.remove("done"); }, 1600);
         } catch {
-          // Clipboard blocked (insecure context, permissions): select the text instead.
           const range = document.createRange();
           range.selectNodeContents(btn.parentElement.querySelector("pre"));
-          const sel = getSelection();
-          sel.removeAllRanges();
-          sel.addRange(range);
+          getSelection().removeAllRanges();
+          getSelection().addRange(range);
         }
       });
     }
+
+    // Fade sections in as they arrive.
+    if ("IntersectionObserver" in window) {
+      const io = new IntersectionObserver((entries) => {
+        for (const e of entries) if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); }
+      }, { rootMargin: "0px 0px -8% 0px" });
+      document.querySelectorAll(".reveal").forEach((el) => io.observe(el));
+    } else {
+      document.querySelectorAll(".reveal").forEach((el) => el.classList.add("in"));
+    }
   </script>
+  <!-- Vercel Web Analytics: cookieless. Serves nothing until it's enabled in the project. -->
+  <script defer src="/_vercel/insights/script.js"></script>
 </body>
 </html>
