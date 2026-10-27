@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo } from "react";
-import { Disc3, Heart, Loader2, Radio } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Disc3, Heart, Loader2, MicVocal, Radio } from "lucide-react";
 import { cn } from "@/lib/cn";
 import type { Participant, Track } from "@/lib/types";
 import { Avatar } from "@/components/ui/avatar";
 import { SectionHeader } from "@/components/ui/panel";
 import { CountButton } from "@/components/ui/track-row";
 import { PresenceAvatar } from "@/components/PresenceCard";
+import Lyrics from "@/components/Lyrics";
 
 /**
  * The artwork-forward hero, and the room's centre of gravity. Everything here
@@ -133,6 +134,21 @@ export default function NowPlaying({
 }) {
   const loading = preparing || buffering;
   const dur = current?.duration ?? 0;
+  // A per-listener preference, remembered across rooms.
+  const [showLyrics, setShowLyrics] = useState(false);
+  useEffect(() => {
+    try {
+      setShowLyrics(localStorage.getItem("sw_lyrics") === "1");
+    } catch {}
+  }, []);
+  const toggleLyrics = () =>
+    setShowLyrics((v) => {
+      try {
+        localStorage.setItem("sw_lyrics", v ? "0" : "1");
+      } catch {}
+      return !v;
+    });
+  const lyricsOpen = showLyrics && Boolean(current);
   const progress = dur > 0 ? Math.min(1, position / dur) : 0;
 
   return (
@@ -155,6 +171,17 @@ export default function NowPlaying({
           copy of the same fact was what made the old panel feel crowded. */}
       <SectionHeader icon={<Radio className="size-3.5" />} title="Now playing" />
 
+      {/* Lyrics take the artwork's place rather than adding a panel: the room
+          is tinted by the cover anyway, so the art is never really gone. */}
+      {lyricsOpen && current && (
+        <Lyrics
+          track={current}
+          position={position}
+          playing={isPlaying && !loading}
+          className="mx-auto h-[min(360px,42vh)] w-full max-w-md shrink-0"
+        />
+      )}
+
       {/* Artwork. The glow lives on the wrapper because .sw-art clips overflow. */}
       <div
         className={cn(
@@ -162,7 +189,8 @@ export default function NowPlaying({
           // cover gives way rather than shoving everything below it off-screen.
           "sw-art-glow mx-auto aspect-square w-full max-w-[min(300px,30vh)] shrink-0",
           "[@media(max-height:720px)]:max-w-[170px]",
-          isPlaying && !loading && "sw-art-playing"
+          isPlaying && !loading && "sw-art-playing",
+          lyricsOpen && "hidden"
         )}
       >
         <div className="sw-art size-full">
@@ -226,6 +254,22 @@ export default function NowPlaying({
                   <span className="truncate">added by {current.addedBy}</span>
                 </span>
               )}
+              <button
+                type="button"
+                onClick={toggleLyrics}
+                aria-pressed={showLyrics}
+                aria-label={showLyrics ? "Hide lyrics" : "Show lyrics"}
+                title={showLyrics ? "Hide lyrics" : "Show lyrics"}
+                className={cn(
+                  "flex items-center gap-1 rounded-full border px-2 py-1 text-[11px] font-semibold",
+                  "transition-[background-color,border-color,color,transform] duration-200 ease-[var(--ease)] hover:-translate-y-px active:scale-95",
+                  showLyrics
+                    ? "border-[color:color-mix(in_oklab,var(--accent)_60%,transparent)] bg-[color:color-mix(in_oklab,var(--accent)_22%,transparent)] text-white"
+                    : "border-white/10 bg-white/[0.04] text-muted hover:border-white/20 hover:text-ink"
+                )}
+              >
+                <MicVocal className="size-3.5" /> Lyrics
+              </button>
               <CountButton
                 icon={<Heart className={cn("size-3.5", liked && "fill-current")} />}
                 count={likes.length}
