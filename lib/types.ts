@@ -73,6 +73,9 @@ export type ChatMsg = {
   actor?: string;
   /** The track a `queued` / `nowplaying` / `dj` entry is about. */
   track?: { title: string; artist: string; thumbnail?: string };
+  /** A batch `queued` entry: how many tracks, and the album or playlist they came from. */
+  count?: number;
+  from?: string;
 };
 
 /** Reactions are never persisted, so they only exist in the live session. */

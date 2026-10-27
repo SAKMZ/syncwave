@@ -6,6 +6,7 @@ import {
   Check,
   Clock3,
   Disc,
+  Link2,
   Loader2,
   Mic2,
   Music,
@@ -54,8 +55,17 @@ function readRecent(): string[] {
   }
 }
 
+/** Looks like something to resolve rather than words to search for. */
+function looksLikeLink(s: string) {
+  const t = s.trim();
+  return /^https?:\/\/\S+$/i.test(t) || /^(www\.|m\.|music\.)?(youtube\.com|youtu\.be|open\.spotify\.com)\/\S+$/i.test(t);
+}
+
+type LinkInfo = { source: string; total: number; missing: string[] };
+
 function SearchPanel({
   onAdd,
+  onAddMany,
   queuedIds,
   variant = "panel",
   shortcut = false,
@@ -63,6 +73,8 @@ function SearchPanel({
   className,
 }: {
   onAdd: (t: Track) => void;
+  /** Add a batch in one go: one chat line, one broadcast. Falls back to `onAdd` per track. */
+  onAddMany?: (tracks: Track[], from?: string) => void;
   /** videoIds already in the room, so a result can say so instead of duplicating. */
   queuedIds: Set<string>;
   variant?: "overlay" | "panel";
@@ -82,6 +94,10 @@ function SearchPanel({
   /** When set, the list shows this album's tracks instead of search results. */
   const [album, setAlbum] = useState<AlbumDetail | null>(null);
   const [cursor, setCursor] = useState(-1);
+  /** Set when the list on screen came from a pasted link rather than an album. */
+  const [linkInfo, setLinkInfo] = useState<LinkInfo | null>(null);
+  const [linkError, setLinkError] = useState<string | null>(null);
+  const isLink = looksLikeLink(q);
 
   // The room renders two of these — the desktop overlay and the phone's Add
   // tab — and both were emitting id="sw-search-results". Duplicate ids make
@@ -143,11 +159,49 @@ function SearchPanel({
     [remember]
   );
 
+  /**
+   * A pasted YouTube or Spotify link. One song shows as a single result; a
+   * playlist or album opens as a list to review, the same view an album uses,
+   * so "Add all" works the same way for both.
+   */
+  const runLink = useCallback(async (url: string) => {
+    const id = ++runId.current;
+    setLoading(true);
+    setLinkError(null);
+    setResults([]);
+    setCursor(-1);
+    try {
+      const res = await fetch(`/api/link?url=${encodeURIComponent(url.trim())}`);
+      const data = await res.json();
+      if (runId.current !== id) return;
+      if (!res.ok) {
+        setLinkError(data?.message || "Couldn't open that link.");
+      } else if (data.kind === "track" && data.track) {
+        setResults([data.track]);
+      } else if (data.kind === "list" && data.list) {
+        const l = data.list;
+        setAlbum({ albumId: `link:${url}`, title: l.title, artist: l.artist, year: null, thumbnail: l.thumbnail, tracks: l.tracks || [] });
+        setLinkInfo({ source: l.source, total: l.total ?? l.tracks?.length ?? 0, missing: l.missing || [] });
+      }
+    } catch {
+      if (runId.current === id) setLinkError("Couldn't reach the server to open that link.");
+    } finally {
+      if (runId.current === id) setLoading(false);
+    }
+  }, []);
+
   // Instant results: type and they arrive, no Enter required. Enter still works
   // and is what promotes a term into the recent list — pressing it is the
   // signal that the query was the one you meant.
   useEffect(() => {
     if (album) return;
+    setLinkInfo(null);
+    setLinkError(null);
+    if (looksLikeLink(q)) {
+      // A paste arrives whole, so there's no typing to wait out.
+      const id = setTimeout(() => runLink(q), 50);
+      return () => clearTimeout(id);
+    }
     if (q.trim().length < 2) {
       setResults([]);
       setLoading(false);
@@ -155,7 +209,7 @@ function SearchPanel({
     }
     const id = setTimeout(() => run(q, tab), DEBOUNCE_MS);
     return () => clearTimeout(id);
-  }, [q, tab, album, run]);
+  }, [q, tab, album, run, runLink]);
 
   // Overlay only: close on outside click.
   useEffect(() => {
@@ -231,6 +285,10 @@ function SearchPanel({
         activate(cursor);
         return;
       }
+      if (isLink) {
+        if (!album && !loading) runLink(q);
+        return;
+      }
       run(q, tab, { persist: true });
       return;
     }
@@ -293,8 +351,9 @@ function SearchPanel({
           <div className="min-w-0 flex-1">
             <div className="truncate text-sm font-semibold text-ink">{album.title}</div>
             <div className="truncate text-xs text-muted">
-              {album.artist}
-              {album.year ? ` · ${album.year}` : ""} · {album.tracks.length} tracks
+              {linkInfo
+                ? `${linkInfo.source} · ${album.tracks.length === linkInfo.total ? `${album.tracks.length} tracks` : `${album.tracks.length} of ${linkInfo.total} found`}`
+                : `${album.artist}${album.year ? ` · ${album.year}` : ""} · ${album.tracks.length} tracks`}
             </div>
           </div>
           {album.tracks.length > 0 && (
@@ -302,11 +361,42 @@ function SearchPanel({
               variant="primary"
               size="sm"
               className="gap-1"
-              onClick={() => album.tracks.forEach(add)}
+              onClick={() => {
+                const fresh = album.tracks.filter((t) => !queuedIds.has(t.videoId) && !added[t.videoId]);
+                if (!fresh.length) return;
+                if (onAddMany) {
+                  onAddMany(fresh, linkInfo ? album.title : `${album.title} by ${album.artist}`);
+                  setAdded((a) => ({ ...a, ...Object.fromEntries(fresh.map((t) => [t.videoId, true])) }));
+                } else {
+                  fresh.forEach(add);
+                }
+              }}
             >
-              <Plus className="size-3.5" /> Add all
+              {album.tracks.some((t) => !queuedIds.has(t.videoId) && !added[t.videoId]) ? (
+                <>
+                  <Plus className="size-3.5" /> Add all
+                </>
+              ) : (
+                <>
+                  <Check className="size-3.5" /> Added
+                </>
+              )}
             </Button>
           )}
+        </li>
+      )}
+
+      {album && linkInfo && linkInfo.missing.length > 0 && (
+        <li className="mb-1 rounded-sm border border-white/8 bg-white/[0.03] px-3 py-2 text-xs text-muted">
+          Couldn&rsquo;t find {linkInfo.missing.length} on YouTube Music:{" "}
+          <span className="text-ink-soft">{linkInfo.missing.slice(0, 3).join(", ")}</span>
+          {linkInfo.missing.length > 3 ? ` and ${linkInfo.missing.length - 3} more` : ""}.
+        </li>
+      )}
+
+      {!album && isLink && linkError && !loading && (
+        <li className="flex flex-1">
+          <EmptyState icon={<Link2 className="size-5" />} title="Couldn't open that link" hint={linkError} />
         </li>
       )}
 
@@ -339,12 +429,12 @@ function SearchPanel({
           <EmptyState
             icon={<Search className="size-5" />}
             title="Search YouTube Music"
-            hint="Songs, albums and artists. Anything you add goes straight into the room's queue."
+            hint="Songs, albums and artists, or paste a YouTube or Spotify link to bring a whole playlist. Anything you add goes straight into the room's queue."
           />
         </li>
       )}
 
-      {!album && !isEmptyQuery && !loading && results.length === 0 && (
+      {!album && !isLink && !isEmptyQuery && !loading && results.length === 0 && (
         <li className="flex flex-1">
           <EmptyState
             icon={<Search className="size-5" />}
@@ -435,7 +525,7 @@ function SearchPanel({
         }}
         onFocus={() => setOpen(true)}
         onKeyDown={onFieldKey}
-        placeholder="Search songs, albums, artists…"
+        placeholder="Search, or paste a YouTube or Spotify link…"
         aria-label="Search YouTube Music"
         role="combobox"
         aria-expanded={showResults}
@@ -500,7 +590,7 @@ function SearchPanel({
 
   const body = (
     <div id={listId}>
-      {!isEmptyQuery && !album && tabs}
+      {!isEmptyQuery && !album && !isLink && tabs}
       <div className={cn(variant === "overlay" ? "mt-2" : "mt-4 flex min-h-0 flex-1 flex-col")}>
         {list}
       </div>

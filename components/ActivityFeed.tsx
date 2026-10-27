@@ -206,6 +206,21 @@ function ActivityText({ item }: { item: Extract<Item, { type: "system" }> }) {
 
   if (kind === "joined" && msg.actor) return <>{who} joined the room</>;
   if (kind === "left" && msg.actor) return <>{who} left</>;
+  // A batch (an album's "Add all", a pasted playlist) names the count and
+  // where it came from, not just the first song in it.
+  if (kind === "queued" && msg.actor && (msg.count ?? 1) > 1) {
+    return (
+      <>
+        {who} queued {msg.count} tracks
+        {msg.from ? (
+          <>
+            {" "}
+            from <span className="text-ink">{msg.from}</span>
+          </>
+        ) : null}
+      </>
+    );
+  }
   if (kind === "queued" && msg.actor && what) return <>{who} queued {what}</>;
   if (kind === "dj" && msg.actor && what) return <>{who} put on {what}</>;
   return <>{msg.text}</>;
