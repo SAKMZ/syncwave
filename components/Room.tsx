@@ -14,6 +14,7 @@ import {
   Play,
   Radio,
   Search as SearchIcon,
+  SlidersHorizontal,
   UserPlus,
   Users,
   X,
@@ -68,6 +69,10 @@ const StatsPanel = dynamic(() => import("@/components/StatsPanel"), {
   loading: () => <PanelLoading label="Counting up…" />,
 });
 const ShortcutsDialog = dynamic(() => import("@/components/ShortcutsDialog"));
+const SoundSettings = dynamic(() => import("@/components/SoundSettings"));
+
+/** Upper bound for the per-device audio delay (matches the settings slider). */
+const DELAY_MAX_MS = 500;
 import { PresenceCard } from "@/components/PresenceCard";
 import InstallButton, { InstallBanner } from "@/components/InstallButton";
 import ShareButton from "@/components/ShareButton";
@@ -141,6 +146,19 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   const CROSSFADE_SECONDS = 5;
   const CROSSFADE_MIN_DURATION = 10;
 
+  // Fine sync. Below the tolerance, drift is left alone (the clock estimate
+  // itself is only good to a few tens of ms); above it, playback speed is
+  // nudged by at most MAX_NUDGE until it closes.
+  const DRIFT_TOLERANCE = 0.04;
+  const MAX_NUDGE = 0.04;
+  // This device's speaker latency, in ms. Read by the sync loop via a ref so
+  // moving the slider doesn't restart it; `resyncRef` asks for one exact jump
+  // so a changed delay applies at once rather than over a few seconds.
+  const [audioDelay, setAudioDelay] = useState(0);
+  const delayRef = useRef(0);
+  const resyncRef = useRef(false);
+  const [soundOpen, setSoundOpen] = useState(false);
+
   const casting = useCasting(
     useCallback(
       () => (activeSlot === "A" ? audioRef.current : nextAudioRef.current),
@@ -173,6 +191,21 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       const n = Number(v);
       if (Number.isFinite(n) && n >= 0 && n <= 1) setVolume(n);
     }
+    const d = Number(typeof window !== "undefined" ? localStorage.getItem("sw_audio_delay_ms") : 0);
+    if (Number.isFinite(d) && d > 0 && d <= DELAY_MAX_MS) {
+      setAudioDelay(d);
+      delayRef.current = d;
+    }
+  }, []);
+
+  const changeDelay = useCallback((ms: number) => {
+    const clamped = Math.max(0, Math.min(DELAY_MAX_MS, Math.round(ms)));
+    setAudioDelay(clamped);
+    delayRef.current = clamped;
+    resyncRef.current = true;
+    try {
+      localStorage.setItem("sw_audio_delay_ms", String(clamped));
+    } catch {}
   }, []);
 
   // Apply volume to the *active* element whenever it, the track, or which
@@ -371,6 +404,10 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       retryRef.current = 0;
       active.src = wantSrc;
       active.load();
+      // A seek before metadata arrives is ignored, which left a fresh join to
+      // close its offset by nudging over several seconds. Land it exactly
+      // once the element can actually seek.
+      active.addEventListener("loadedmetadata", () => (resyncRef.current = true), { once: true });
     }
 
     const tick = () => {
@@ -422,6 +459,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
           crossfadingRef.current = true;
           inactive.src = `/audio/${next.videoId}`;
           inactive.currentTime = 0;
+          inactive.playbackRate = 1;
           inactive.volume = 0;
           inactive.play().catch(() => {});
           // The next track's own loudness gain isn't known client-side until
@@ -446,12 +484,25 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       // A crossfade in progress owns the active element's fade-out on its own
       // terms — forcing its position to `expected` mid-ramp would just fight
       // the fade with a stutter right as it's supposed to be smooth.
-      if (
-        !crossfadingRef.current &&
-        Number.isFinite(expected) &&
-        Math.abs(active.currentTime - expected) > 0.75
-      ) {
-        active.currentTime = Math.max(0, expected);
+      //
+      // `target` runs ahead of the room by this device's audio delay, so the
+      // sound that comes out of slow (Bluetooth) speakers lands in step.
+      // Large drift jumps; small drift is steered by playing a few percent
+      // fast or slow until it closes. A jump is audible, a 3% speed change
+      // isn't, and this is what takes sync from "within a second" to
+      // "within a few tens of milliseconds".
+      const target = expected + delayRef.current / 1000;
+      if (!crossfadingRef.current && Number.isFinite(target)) {
+        const drift = active.currentTime - target;
+        if (Math.abs(drift) > 0.75 || resyncRef.current) {
+          resyncRef.current = false;
+          active.currentTime = Math.max(0, target);
+          active.playbackRate = 1;
+        } else if (pb.isPlaying && !active.paused && Math.abs(drift) > DRIFT_TOLERANCE) {
+          active.playbackRate = 1 - Math.max(-MAX_NUDGE, Math.min(MAX_NUDGE, drift));
+        } else if (active.playbackRate !== 1) {
+          active.playbackRate = 1;
+        }
       }
       setBuffering(pb.isPlaying && active.readyState < 3);
     };
@@ -490,6 +541,13 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   const addTrack = useCallback(
     (track: Track) => {
       emit(EVENTS.QUEUE_ADD, { track });
+      signal("queueing");
+    },
+    [emit, signal]
+  );
+  const addTracks = useCallback(
+    (tracks: Track[], from?: string) => {
+      emit(EVENTS.QUEUE_ADD_MANY, { tracks, from });
       signal("queueing");
     },
     [emit, signal]
@@ -717,6 +775,9 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
 
       <Reactions incoming={lastReaction} />
       {helpOpen && <ShortcutsDialog open onOpenChange={setHelpOpen} isHost={isHost} />}
+      {soundOpen && (
+        <SoundSettings open onOpenChange={setSoundOpen} delayMs={audioDelay} onDelay={changeDelay} />
+      )}
 
       {/* The one thing a screen reader must not have to go looking for: what
           the room is playing. Polite, so it waits for a gap rather than
@@ -767,6 +828,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
             the time. */}
         <SearchPanel
           onAdd={addTrack}
+          onAddMany={addTracks}
           queuedIds={roomIds}
           variant="overlay"
           shortcut
@@ -801,6 +863,16 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
               onKick={kickParticipant}
             />
           )}
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setSoundOpen(true)}
+            aria-label="Sound settings"
+            title={audioDelay ? `Sound settings (audio delay ${audioDelay} ms)` : "Sound settings"}
+          >
+            <SlidersHorizontal className="size-4" />
+          </Button>
 
           <Button
             variant="ghost"
@@ -861,6 +933,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
             <Panel className={cn(tab === "search" ? "flex flex-1" : "hidden", "md:hidden")}>
               <SearchPanel
                 onAdd={addTrack}
+                onAddMany={addTracks}
                 queuedIds={roomIds}
                 variant="panel"
                 openSignal={searchSignal}
