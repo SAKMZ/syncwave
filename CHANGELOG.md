@@ -5,6 +5,18 @@ Full notes for each release are on the [releases page](https://github.com/SAKMZ/
 
 ## Unreleased
 
+## 1.3.0 · 2026-10-27
+
+### Added
+- **Paste a link to queue it.** A YouTube or YouTube Music song, playlist or album, or a Spotify track, album or playlist (up to 100 tracks). Spotify tracks are matched to YouTube Music by title, artist and length; any that can't be matched are listed rather than guessed. No Spotify account or key needed.
+- **Synced lyrics** from [LRCLIB](https://lrclib.net). Tap *Lyrics* on the now-playing card and the current line follows the room's clock, so everyone is on the same line.
+- **Audio delay** in the new *Sound settings* (the sliders icon in the room's header). Bluetooth headphones and speakers play sound 100–300 ms late; setting the delay plays that far ahead so what you hear lines up with everyone else. Saved per device.
+- `LINK_IMPORT_LIMIT` caps link imports per address per hour (default 30).
+
+### Changed
+- **Tighter sync for everyone.** Drift under 0.75 s used to be left alone. It's now closed by playing up to 4% faster or slower until it's gone, which keeps listeners within a few tens of milliseconds without an audible jump.
+- An album's *Add all* queues the whole album in one go: one activity line ("queued 13 tracks from …") and only the next couple of songs pre-fetched, instead of a line and a download per track.
+
 ## 1.2.0 · 2026-09-26
 
 ### Added

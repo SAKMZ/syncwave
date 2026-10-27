@@ -25,6 +25,15 @@ That's the most common setup: voice in Discord, music in a Syncwave room everyon
 **Is it a Discord music bot, Watch2Gether, or Teleparty for music?**
 Same idea, different shape: a web room you host yourself, with a real queue and a real player instead of a bot's text commands.
 
+**Can I bring my Spotify or YouTube playlists?**
+Yes. Paste the link into the search box. YouTube and YouTube Music songs, playlists and albums work directly. Spotify tracks, albums and playlists (up to 100 songs) are matched to the same songs on YouTube Music; anything that can't be matched confidently is listed instead of guessed. No Spotify account is needed.
+
+**The music sounds a beat behind everyone else.**
+That's almost always Bluetooth: wireless headphones and speakers play sound 100–300 ms late. Open **Sound settings** (the sliders icon at the top of the room) and pick *Bluetooth*, or move the slider until you're together. It's saved on that device only.
+
+**Where do the lyrics come from?**
+[LRCLIB](https://lrclib.net), a free community lyrics database. Tap **Lyrics** on the now-playing card. If a song has none yet, anyone can add them on LRCLIB.
+
 **Which browsers does it need?**
 Anything from 2023 onward: Chrome or Edge 111+, Safari 16.4+, Firefox 113+. Older browsers will load it, but some colours will be off.
 

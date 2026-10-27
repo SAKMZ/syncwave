@@ -27,8 +27,10 @@ Start a room, send one link, and everyone hears the same second of the same song
 
 | | |
 | --- | --- |
-| **Synced playback** | A server-side clock keeps every listener on the same second. A laptop waking from sleep catches up instead of pulling the room back. |
+| **Synced playback** | A server-side clock keeps every listener within a few tens of milliseconds, with a per-device delay setting for Bluetooth speakers. A laptop waking from sleep catches up instead of pulling the room back. |
 | **Shared queue** | Anyone can add. Upvotes move a track one place per person, drag to reorder, vote to skip, and see who added what. |
+| **Paste a playlist** | Drop in a YouTube or Spotify link (song, album or playlist) and queue it in one go. No Spotify account needed. |
+| **Synced lyrics** | Everyone sees the same line at the same moment, from the free LRCLIB database. |
 | **One-link rooms** | No sign-ups for anyone. Rooms survive restarts, so a link can be your group's spot for good. |
 | **Chat and presence** | See who's listening, typing or away. Reactions burst identically on every screen. |
 | **Sounds like a real app** | Crossfade, volume levelling, lock-screen controls and casting to speakers. |
