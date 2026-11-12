@@ -5,6 +5,18 @@ Full notes for each release are on the [releases page](https://github.com/SAKMZ/
 
 ## Unreleased
 
+### Added
+- A room can be created with a fixed `code`, so it has a permanent address (`/r/WORK`) that survives a restart instead of a fresh random one. `POST /api/rooms` takes an optional `code`; a collision is a `409`. Random codes stay the default.
+
+### Fixed
+- **The room advanced only when the host's audio ended.** Advance was gated on the host's socket *and* the host's own `<audio>` element firing `ended`, so a backgrounded tab, a locked phone or an errored element left the room sitting at the end of a track until someone vote-skipped. Any listener may now report it; the server keeps the first report that matches the track it believes is current. A 3 s per-room debounce keeps `repeat: one` — which replays the same `videoId` — from advancing once per listener.
+- **A stalled download hung the room and leaked a slot.** `runDownload` had no timeout, so a yt-dlp child that never exits left `preparing` set (everyone sees buffering) and the download slot taken; three of those and nothing loaded again. It is now killed after 90 s without progress, or 8 minutes total.
+- **Duplicate tracks in the queue.** Adding a track that is already queued returns the existing entry and says so ("already in the queue — upvote it to move it up") instead of queueing a second copy.
+- **Mute did nothing on iPhone**, and was skipped during the crossfade at every track change — `volume` is ignored when set programmatically there, only `muted` counts.
+- **"Add to Home Screen" produced a blank tile on iOS**, which ignores an SVG `apple-touch-icon`. Added 180/192/512 PNGs and wired both manifests.
+- **The fine-sync constants assumed a LAN.** Over cellular and a VPN the clock estimate is only good to ~100 ms, so `playbackRate` was rewritten every second and iOS turned that into stutter. Tolerance is now 300 ms, the nudge is gentler, and the hard seek is 1.5 s.
+- **The "address changes each time you restart" caveat showed on a stable domain.** It only applies to the `--share` quick tunnel.
+
 ## 1.3.0 · 2026-10-27
 
 ### Added

@@ -149,8 +149,8 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   // Fine sync. Below the tolerance, drift is left alone (the clock estimate
   // itself is only good to a few tens of ms); above it, playback speed is
   // nudged by at most MAX_NUDGE until it closes.
-  const DRIFT_TOLERANCE = 0.04;
-  const MAX_NUDGE = 0.04;
+  const DRIFT_TOLERANCE = 0.30;
+  const MAX_NUDGE = 0.03;
   // This device's speaker latency, in ms. Read by the sync loop via a ref so
   // moving the slider doesn't restart it; `resyncRef` asks for one exact jump
   // so a changed delay applies at once rather than over a few seconds.
@@ -216,9 +216,18 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   // multiplies the listener's own volume rather than replacing it — volume
   // stays entirely local either way.
   useEffect(() => {
-    if (crossfadingRef.current) return;
     const el = activeSlot === "A" ? audioRef.current : nextAudioRef.current;
-    if (el) el.volume = Math.min(1, volume * (current?.gain ?? 1));
+    if (!el) return;
+    // `muted` is the only property iOS Safari honours for muting — it ignores a
+    // programmatic `volume` — so mute has to set both, and it has to be applied
+    // even while a crossfade owns the volume ramp below.
+    const muted = volume === 0;
+    if (crossfadingRef.current) {
+      el.muted = muted;
+      return;
+    }
+    el.volume = Math.min(1, volume * (current?.gain ?? 1));
+    el.muted = muted;
   }, [volume, current?.videoId, current?.gain, activeSlot]);
 
   // Read via refs inside the tick loop below, so adjusting the volume slider
@@ -494,7 +503,7 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       const target = expected + delayRef.current / 1000;
       if (!crossfadingRef.current && Number.isFinite(target)) {
         const drift = active.currentTime - target;
-        if (Math.abs(drift) > 0.75 || resyncRef.current) {
+        if (Math.abs(drift) > 1.5 || resyncRef.current) {
           resyncRef.current = false;
           active.currentTime = Math.max(0, target);
           active.playbackRate = 1;
@@ -519,7 +528,11 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
   };
 
   const onEnded = () => {
-    if (isHost && current) emit(EVENTS.TRACK_ENDED, { videoId: current.videoId });
+    // Report the end from every listener, not just the host. The server keeps
+    // whichever report matches the track it thinks is playing, so this is the
+    // difference between "the room advances" and "the room stalls until someone
+    // votes to skip".
+    if (current) emit(EVENTS.TRACK_ENDED, { videoId: current.videoId });
   };
   const onAudioError = () => {
     // Wired to whichever <audio> tag is currently active (see the JSX below),

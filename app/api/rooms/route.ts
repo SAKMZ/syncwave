@@ -30,14 +30,30 @@ export async function POST(req: NextRequest) {
 
   let name: string | undefined;
   let inviteOnly: boolean | undefined;
+  let wanted: string | undefined;
   try {
     const body = await req.json();
     name = body?.name;
     inviteOnly = Boolean(body?.inviteOnly);
+    // An optional fixed code: "make this room live at /r/<code> forever".
+    // Random 6-char codes stay the default; a fixed one has to be asked for.
+    if (typeof body?.code === "string" && body.code.trim()) {
+      const candidate = body.code.trim().toUpperCase();
+      if (!/^[A-Z0-9][A-Z0-9-]{2,31}$/.test(candidate)) {
+        return NextResponse.json(
+          { error: "code must be 3-32 chars: A-Z, 0-9, dash" },
+          { status: 400 }
+        );
+      }
+      if (getRoom(candidate)) {
+        return NextResponse.json({ error: "code_taken" }, { status: 409 });
+      }
+      wanted = candidate;
+    }
   } catch {
     /* no body */
   }
-  const room = createRoom(name, inviteOnly);
+  const room = createRoom(name, inviteOnly, wanted);
   return NextResponse.json({ code: room.code, ownerToken: room.ownerToken, name: room.name });
 }
 
