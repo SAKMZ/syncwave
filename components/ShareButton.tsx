@@ -106,7 +106,9 @@ export default function ShareButton({ code }: { code: string }) {
               )}
             </p>
 
-            {reachable && publicUrl && (
+            {reachable &&
+              publicUrl &&
+              publicUrl.includes("trycloudflare.com") && (
               <p className="mt-2 flex items-start gap-1.5 text-[11px] text-muted">
                 <QrCode className="mt-0.5 size-3 shrink-0" />
                 The address changes each time you restart Syncwave.

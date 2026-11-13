@@ -46,7 +46,13 @@ export async function generateMetadata(): Promise<Metadata> {
       "JQBX alternative",
       "Turntable.fm alternative",
     ],
-    icons: { icon: "/icon.svg", apple: "/icon.svg" },
+    icons: {
+      icon: [
+        { url: "/icon.svg", type: "image/svg+xml" },
+        { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+      ],
+      apple: "/apple-touch-icon.png",
+    },
     manifest: "/manifest.webmanifest",
     appleWebApp: { capable: true, title: "Syncwave", statusBarStyle: "black-translucent" },
     openGraph: {
