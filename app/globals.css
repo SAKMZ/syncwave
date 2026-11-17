@@ -745,6 +745,42 @@ html { scroll-behavior: smooth; }
 .sw-scroll::-webkit-scrollbar { width: 8px; height: 8px; }
 .sw-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 8px; }
 .sw-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.28); }
+
+/* ---------------------------------------------------------------------------
+   The room's column floor
+   The room is a fixed shell: the header, the phone tab bar and the player never
+   move, and each column owns its scrolling. That only holds while the viewport
+   is tall enough to give every list a usable height. Below that, `min-h-0` flex
+   children shrink to nothing and the lists are clipped rather than reachable —
+   which is exactly what a short window or a phone in landscape used to do to
+   the queue, the history, the suggestions and the chat.
+
+   So every column declares a floor. When the floor no longer fits, `main`
+   scrolls (it is the room's only scroll container in that case) and the lists
+   keep a few real rows each. Written here rather than as `min-h-[34rem]` on the
+   element because two `min-height` utilities on one node are decided by
+   stylesheet order, not by the order they appear in the class list.
+--------------------------------------------------------------------------- */
+.sw-room-body { --room-floor: 26rem; }
+.sw-room-col { min-height: var(--room-floor); }
+
+/* On a phone the columns live inside a padded flex container rather than a
+   grid. The container has to carry the same floor plus its own padding,
+   otherwise the column grows past it and paints over the install banner below
+   instead of pushing it down — measured: 143px of overlap at 390x667.
+   Only the tabs that actually show a floored column get it: the Now tab is the
+   now-playing card, which already scrolls itself, and a floor there left a
+   landscape phone scrolling through 250px of nothing. At md the floor also
+   clears the container's bottom padding, so the fold lands after the panel
+   rather than on the last row. */
+.sw-room-body[data-room-tab="queue"],
+.sw-room-body[data-room-tab="search"],
+.sw-room-body[data-room-tab="chat"] {
+  min-height: calc(var(--room-floor) + 3rem);
+}
+@media (min-width: 768px) {
+  .sw-room-body { --room-floor: 34rem; }
+}
 .sw-drawer-overlay, .sw-alert-overlay { position: fixed; }
 .sw-toast { border: 1px solid var(--soft-border); background: var(--surface); color: var(--ink); border-radius: var(--radius-sm); }
 

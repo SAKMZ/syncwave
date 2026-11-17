@@ -5,6 +5,9 @@ Full notes for each release are on the [releases page](https://github.com/SAKMZ/
 
 ## Unreleased
 
+### Fixed
+- **The room's lists no longer disappear in a short window.** In a window too short for the three columns, or on a phone in landscape, the queue, the history, the suggestions and the chat were squeezed down to nothing and cut off instead of becoming scrollable. Each column now keeps a minimum height, and the middle of the page scrolls once the columns no longer fit, so the header, the tab bar and the player stay where they are and every list keeps a few usable rows.
+
 ## 1.3.0 · 2026-10-27
 
 ### Added
