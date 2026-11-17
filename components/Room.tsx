@@ -896,11 +896,24 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
       </header>
 
       {/* ── body ── */}
-      <main className="relative flex min-h-0 flex-1 flex-col" {...swipe}>
+      {/* `overflow-y-auto` is the room's floor: every column below has a
+          minimum height, so when the viewport is too short to give them one the
+          middle of the page scrolls instead of the lists being clipped to
+          nothing. On a screen with room for it this never scrolls at all.
+          `overflow-x-hidden` is not cosmetic: a block with one axis set to
+          `auto` computes the other to `auto` too, and the shell used to clip
+          horizontally for free. */}
+      <main
+        className="sw-scroll relative flex min-h-0 flex-1 flex-col overflow-y-auto overflow-x-hidden"
+        {...swipe}
+      >
         {/* The bottom padding on phones is the reaction pill's safe area: it
             floats over this region, and without the gap it sits on top of
             whatever the panel ends with. */}
-        <div className="mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 pb-8 pt-4 md:grid md:h-full md:grid-cols-[minmax(0,1fr)_360px] md:pb-4 xl:grid-cols-[340px_minmax(0,1fr)_380px]">
+        <div
+          data-room-tab={tab}
+          className="sw-room-body mx-auto flex min-h-0 w-full max-w-[1600px] flex-1 flex-col gap-4 px-4 pb-8 pt-4 md:grid md:h-full md:grid-cols-[minmax(0,1fr)_360px] md:pb-4 xl:grid-cols-[340px_minmax(0,1fr)_380px]"
+        >
           {/* ── column 1: the hero ── */}
           <NowPlaying
             current={current}
@@ -924,7 +937,10 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
           {/* ── column 2: what the room is about to hear, and what it has ── */}
           <div
             className={cn(
-              "min-h-0 flex-1 flex-col gap-4",
+              // `sw-room-col` is the floor, not a ceiling: below it the queue
+              // panel has no room for a usable list, so the page scrolls rather
+              // than squeezing both panels into a couple of clipped rows.
+              "sw-room-col flex-1 flex-col gap-4",
               tab === "queue" || tab === "search" ? "flex" : "hidden",
               "md:flex md:h-full md:flex-initial"
             )}
@@ -998,7 +1014,13 @@ export default function Room({ code, asHost }: { code: string; asHost: boolean }
 
           {/* ── column 3: the people ── */}
           <Panel
-            className={cn(tab === "chat" ? "flex flex-1" : "hidden", "md:flex md:h-full md:gap-4")}
+            className={cn(
+              // Same floor as the centre column — chat and activity are lists
+              // too, and they were clipped by the same short viewport.
+              "sw-room-col",
+              tab === "chat" ? "flex flex-1" : "hidden",
+              "md:flex md:h-full md:gap-4"
+            )}
           >
             {/* Two surfaces, one column. Desktop stacks them; a phone hasn't the
                 height for that, so they take turns. */}
