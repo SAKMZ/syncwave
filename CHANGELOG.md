@@ -5,6 +5,9 @@ Full notes for each release are on the [releases page](https://github.com/SAKMZ/
 
 ## Unreleased
 
+### Added
+- **Tap an artist's name to hear more from them.** Wherever a track is listed — the queue, the history, the suggestions and the now-playing card — the artist under the title is now a button: it fills the search field with their name and shows their songs, ready to queue. It replaces a line of plain text, so there is nothing new to learn.
+
 ## 1.3.0 · 2026-10-27
 
 ### Added

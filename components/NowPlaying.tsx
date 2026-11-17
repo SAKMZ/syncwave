@@ -115,6 +115,7 @@ export default function NowPlaying({
   onLike,
   canSeek,
   onSeek,
+  onArtistClick,
   className,
 }: {
   current: Track | null;
@@ -130,10 +131,15 @@ export default function NowPlaying({
   onLike: () => void;
   canSeek: boolean;
   onSeek: (seconds: number) => void;
+  /** The artist playing is a way into a search for them, like everywhere else. */
+  onArtistClick: (artist: string) => void;
   className?: string;
 }) {
   const loading = preparing || buffering;
   const dur = current?.duration ?? 0;
+  // Lifted out of the JSX: the artist is pressed in a callback, and narrowing
+  // `current` inside one is a promise TypeScript does not keep.
+  const artistName = current?.artist ?? "";
   // A per-listener preference, remembered across rooms.
   const [showLyrics, setShowLyrics] = useState(false);
   useEffect(() => {
@@ -244,9 +250,17 @@ export default function NowPlaying({
             >
               {current.title}
             </h2>
-            <p className="mt-1 truncate text-sm text-ink-soft" title={current.artist}>
-              {current.artist}
-            </p>
+            {artistName ? (
+              <button
+                type="button"
+                onClick={() => onArtistClick(artistName)}
+                title={`Search for ${artistName}`}
+                aria-label={`Search for ${artistName}`}
+                className="sw-focus mx-auto mt-1 block max-w-full truncate rounded-sm px-1 text-sm text-ink-soft transition-colors duration-150 ease-[var(--ease)] hover:text-ink hover:underline hover:decoration-white/40 hover:underline-offset-2"
+              >
+                {artistName}
+              </button>
+            ) : null}
             <div className="mt-3 flex items-center justify-center gap-3">
               {current.addedBy && (
                 <span className="flex min-w-0 items-center gap-1.5 text-xs text-muted">

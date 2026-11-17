@@ -25,6 +25,7 @@ function Recommendations({
   mood,
   excludeIds,
   onAdd,
+  onArtistClick,
   limit = 5,
   className,
 }: {
@@ -34,6 +35,8 @@ function Recommendations({
   /** videoIds already playing or queued; never suggest those back. */
   excludeIds: Set<string>;
   onAdd: (t: Track) => void;
+  /** A suggestion's artist is a way out of the panel: search them instead. */
+  onArtistClick: (artist: string) => void;
   limit?: number;
   className?: string;
 }) {
@@ -141,6 +144,7 @@ function Recommendations({
             art={t.thumbnail}
             title={t.title}
             artist={t.artist}
+            onArtistClick={onArtistClick}
             actions={
               <RowAction
                 label={added[t.videoId] ? `${t.title} added` : `Add ${t.title}`}

@@ -40,6 +40,7 @@ function QueuePanel({
   onVote,
   onReorder,
   onOpenSearch,
+  onArtistClick,
   className,
 }: {
   queue: Track[];
@@ -52,6 +53,8 @@ function QueuePanel({
   onVote: (id: string) => void;
   onReorder: (id: string, toIndex: number) => void;
   onOpenSearch: () => void;
+  /** Artist names in the queue lead to a search for them. */
+  onArtistClick: (artist: string) => void;
   className?: string;
 }) {
   const totalSec = queue.reduce((n, t) => n + (t.duration || 0), 0);
@@ -113,6 +116,7 @@ function QueuePanel({
                 art={t.thumbnail}
                 title={t.title}
                 artist={t.artist}
+                onArtistClick={onArtistClick}
                 addedBy={t.addedBy}
                 addedAt={t.addedAt}
                 now={now}

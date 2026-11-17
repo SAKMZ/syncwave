@@ -35,10 +35,13 @@ function fmtPlayed(sec: number, duration: number) {
 function HistoryPanel({
   history,
   onReAdd,
+  onArtistClick,
   className,
 }: {
   history: HistoryEntry[];
   onReAdd: (t: Track) => void;
+  /** Artist names here lead to a search for them, same as the queue. */
+  onArtistClick: (artist: string) => void;
   className?: string;
 }) {
   const [showSkipped, setShowSkipped] = useState(true);
@@ -104,6 +107,7 @@ function HistoryPanel({
               art={h.thumbnail}
               title={h.title}
               artist={h.artist}
+              onArtistClick={onArtistClick}
               addedBy={h.addedBy}
               muted={h.skipped}
               trailing={

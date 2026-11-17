@@ -70,6 +70,7 @@ function SearchPanel({
   variant = "panel",
   shortcut = false,
   openSignal = 0,
+  seed,
   className,
 }: {
   onAdd: (t: Track) => void;
@@ -82,6 +83,12 @@ function SearchPanel({
   shortcut?: boolean;
   /** Bump to focus the field from elsewhere — the `/` shortcut does this. */
   openSignal?: number;
+  /**
+   * A search to run from elsewhere — clicking an artist anywhere in the room.
+   * Carries its own counter so asking for the same artist twice still lands,
+   * and so a click does not look like a keystroke in the field.
+   */
+  seed?: { query: string; type: SearchType; n: number };
   className?: string;
 }) {
   const [q, setQ] = useState("");
@@ -209,7 +216,40 @@ function SearchPanel({
     }
     const id = setTimeout(() => run(q, tab), DEBOUNCE_MS);
     return () => clearTimeout(id);
-  }, [q, tab, album, run, runLink]);
+    // `seed?.n` is here, not in the effect above, so that pressing an artist
+    // whose name is already in the field still runs exactly one search.
+  }, [q, tab, album, run, runLink, seed?.n]);
+
+  /**
+   * A search asked for from somewhere else — an artist name pressed in the
+   * queue, the history, a suggestion or on the now-playing card. It fills the
+   * field, sets the tab and runs, so pressing a name behaves exactly like
+   * typing it in and pressing Enter. Album/link state is cleared first: this
+   * is a new question.
+   *
+   * Result rows deliberately do not have one of these buttons: the row is a
+   * `role="option"` in a listbox, whose children are presentational, so a
+   * focusable control inside it is an ARIA violation and steals a tab stop
+   * from the arrow-key walk. Searching an artist from a result's own artist
+   * name is what the Artists tab is for.
+   */
+  useEffect(() => {
+    if (!seed?.n) return;
+    const term = seed.query.trim();
+    if (!term) return;
+    setAlbum(null);
+    setLinkInfo(null);
+    setLinkError(null);
+    setOpen(true);
+    setTab(seed.type);
+    setQ(term);
+    inputRef.current?.focus();
+    // Deliberately only on the counter: the same artist pressed twice is two
+    // searches, and `q`/`tab` changing must not re-run this — the debounced
+    // effect below does the fetching, and it takes `seed.n` as well so that
+    // naming the artist already in the field still searches again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seed?.n]);
 
   // Overlay only: close on outside click.
   useEffect(() => {

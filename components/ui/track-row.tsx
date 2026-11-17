@@ -141,6 +141,7 @@ export function TrackRow({
   shift = 0,
   exiting = false,
   option,
+  onArtistClick,
   onClick,
   className,
 }: {
@@ -172,6 +173,11 @@ export function TrackRow({
   exiting?: boolean;
   /** Marks the row as a listbox option — search results, where arrows walk. */
   option?: boolean;
+  /**
+   * Makes the artist name a control that searches for them. Optional: a row
+   * with nowhere to go still renders the name as plain text.
+   */
+  onArtistClick?: (artist: string) => void;
   onClick?: () => void;
   className?: string;
 }) {
@@ -211,9 +217,30 @@ export function TrackRow({
           {title}
         </div>
         <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-xs text-muted">
-          <span className="truncate" title={artist}>
-            {artist}
-          </span>
+          {onArtistClick ? (
+            // A button, not a span: the artist under a title is the one piece of
+            // a row that leads somewhere. stopPropagation because a row can
+            // itself be a control, and pressing the name must do one thing, not
+            // two. Callers must not set this on a row that is a listbox option —
+            // its children are presentational and the extra tab stop would
+            // break the arrow-key walk.
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onArtistClick(artist);
+              }}
+              title={`Search for ${artist}`}
+              aria-label={`Search for ${artist}`}
+              className="sw-focus -mx-1 min-w-0 truncate rounded-sm px-1 text-left transition-colors duration-150 ease-[var(--ease)] hover:text-ink hover:underline hover:decoration-white/40 hover:underline-offset-2"
+            >
+              {artist}
+            </button>
+          ) : (
+            <span className="truncate" title={artist}>
+              {artist}
+            </span>
+          )}
           {addedBy && (
             <>
               <span aria-hidden>·</span>
